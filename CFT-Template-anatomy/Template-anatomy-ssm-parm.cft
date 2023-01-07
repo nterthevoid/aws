@@ -1,0 +1,33 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Template outline",
+  "Metadata" : {
+  },
+  "Parameters" : {
+    "parmurl" : {
+      "Type" : "String",
+      "Default" : "string-text",
+    },
+  },
+  "Rules" : {
+  },
+  "Mappings" : {
+  },
+  "Conditions" : {
+  },
+  "Resources" : {
+    "ssmurl" : {
+      "Type" : "AWS::SSM::Parameter",
+        "Properties" : {
+            "Name" : "url",
+            "Type" : "String",
+            "Value" : {"Ref" : "parmurl"}
+          }
+        }
+  },
+  "Outputs" : {
+    "parmurl" :{
+      "Value": {"Ref" : "parmurl"}
+    }
+  }
+}

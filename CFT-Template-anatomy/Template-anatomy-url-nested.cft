@@ -1,0 +1,33 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Template outline",
+
+  "Metadata" : {
+  },
+  "Parameters" : {
+    "url" : {
+      "Type" : "String",
+      "Default" : "{{resolve:ssm:parmurl:1}}",
+    }
+  },
+  "Rules" : {
+  },
+  "Mappings" : {
+  },
+  "Conditions" : {
+  },
+  "Resources" : {
+    "rootcft" : {
+      "Type" : "AWS::CloudFormation::Stack",
+        "Properties" : {
+          "TemplateURL" : {"Ref" : "url"},
+        },
+    },
+  },
+  "Outputs" : {
+    "rootcft" :{
+      "Value": {"Ref" : "rootcft"}
+    }
+  }
+}
