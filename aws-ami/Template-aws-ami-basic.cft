@@ -1,3 +1,4 @@
+# Sample with logic that includes existing VPC network configurations and Security Groups
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
   "Description" : "Basic AWS AMi deploy",
