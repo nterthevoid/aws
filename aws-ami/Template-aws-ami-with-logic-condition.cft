@@ -1,4 +1,7 @@
-# Greenfield net new ...
+# Sample template with logic that includes allowance for existing VPC network configurations and Security Groups. Includes overide or bypass yes no switch for setting new Networking configs.  
+# ***Note***
+# AWS  AWS-specific parameter types do not support default settings in parsmaters. You can NOT set null/none/empty as there is an implied only allow from list. The result is, you have to select existing VPC, ... even of the flag is set to Yes.  I.e. its and AWS features... not my code...
+
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
   "Description" : "Basic AWS AMi deploy",
@@ -35,42 +38,77 @@
         "vpcid" : { "default" : "Select Which VPC should this be deployed to?" },
         "subnetid" : { "default" : "Select Which Subnet should this be deployed to?" },
         "sgid" : { "default" : "Select Which Security Group to be used ?" },
-        "response" : { "default" : "Select Yes, to create new VPC, subnet and Security Group ?" }
-      }
-    }
+        "response" : { "default" : "Select Yes, to create new VPC, subnet and Security Group ?" },
+      },
+    },
   },
   "Parameters" : {
     "parmurl" : {
       "Type" : "String",
-      "Default" : "string-text"
+      "Default" : "string-text",
     },
     "LatestAmiId" : {
       "Type" : "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-       "Default" : "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+       "Default" : "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2",
      },
      "instype": {
          "Type": "String",
          "AllowedValues" : ["t3.nano", "t3.micro", "t3.small", "t3.medium", "t3.large", "t3.xlarge", "t3.2xlarge"],
-         "Default": "t3.nano"
+         "Default": "t3.nano",
      },
      "Addpupip": {
          "Type": "String",
-         "Default": "0.0.0.0/0"
+         "Default": "0.0.0.0/0",
      },
      "keypair": {
          "Type" : "AWS::EC2::KeyPair::KeyName",
-         "Default": "delme"
-     }
+         "Default": "delme",
+     },
+     "vpcid": {
+         "Type" : "AWS::EC2::VPC::Id",
+         "Default": "must-select"
+
+     },
+     "subnetid": {
+         "Type" : "AWS::EC2::Subnet::Id",
+         "Default": "must-select"
+     },
+     "sgid": {
+         "Type" : "AWS::EC2::SecurityGroup::Id",
+         "Default": "must-select"
+     },
+     "response": {
+         "Type" : "String",
+         "Default": "Yes",
+         "AllowedValues" : ["Yes", "No"],
+         "Description" : "Bypasses existing VPC, Security Groups, adn subnet information selected."
+     },
   },
+  "Rules" : {
+  },
+  "Mappings" : {
+  },
+  "Conditions" : {
+    "createnew": {
+    "Fn::Equals": [
+        {
+            "Ref": "response"
+        },
+        "Yes",
+    ],
+    },
+},
   "Resources" : {
     "vpc1" : {
       "Type" : "AWS::EC2::VPC",
+      "Condition": "createnew",
       "Properties": {
           "CidrBlock": "10.0.0.0/16"
                   }
     },
     "Subnet1": {
         "Type": "AWS::EC2::Subnet",
+        "Condition": "createnew",
         "Properties": {
             "VpcId": {
                 "Ref": "vpc1"
@@ -84,11 +122,12 @@
                 }
               ]
             },
-            "Tags" : [{"Key" : "Name", "Value" : "Subnet1"}]
-        }
+            "Tags" : [{"Key" : "Name", "Value" : "Subnet1"}],
+        },
     },
     "SG1" : {
               "Type" : "AWS::EC2::SecurityGroup",
+              "Condition": "createnew",
               "Properties" : {
                   "GroupDescription" : "SECGroup",
                   "SecurityGroupEgress" : [ {
@@ -103,38 +142,43 @@
                       "Ref": "vpc1"
                   }
                 }
-    },
+              },
     "IGW1" : {
       "Type" : "AWS::EC2::InternetGateway",
+      "Condition": "createnew",
       "Properties" : {
         "Tags" : [{"Key" : "Name", "Value" : "IGW1"}]
-      }
+      },
     },
     "IGWAttach":{
       "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Condition": "createnew",
         "Properties": {
           "InternetGatewayId" : {"Ref":"IGW1"},
           "VpcId" : {"Ref":"vpc1"}
-      }
+      },
     },
     "RTbl1": {
       "Type" : "AWS::EC2::RouteTable",
+      "Condition": "createnew",
       "Properties" : {
         "VpcId": {
             "Ref": "vpc1"
-        }
-        }
+        },
+        },
     },
     "RouteSubnet1" : {
        "Type" : "AWS::EC2::Route",
+       "Condition": "createnew",
        "Properties" : {
           "RouteTableId" : { "Ref" : "RTbl1" },
           "DestinationCidrBlock" : "0.0.0.0/0",
           "GatewayId" : { "Ref" : "IGW1" }
-       }
+       },
     },
     "SubnetAssignRTbl1" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Condition": "createnew",
       "Properties" : {
           "RouteTableId" : {"Ref" : "RTbl1"},
           "SubnetId" : {"Ref" : "Subnet1"}
@@ -147,13 +191,25 @@
             "NetworkInterfaces": [ {
               "AssociatePublicIpAddress": "true",
               "DeviceIndex": "0",
-              "GroupSet": [{"Ref" : "SG1"}],
-              "SubnetId" : {"Ref" : "Subnet1"}
+              "GroupSet": [{
+                "Fn::If" : [
+                  "createnew",
+                  {"Ref" : "SG1"},
+                  {"Ref" : "sgid"}
+                ]
+              }],
+              "SubnetId" : {
+                "Fn::If" : [
+                    "createnew",
+                      {"Ref" : "Subnet1"},
+                      {"Ref" : "subnetid"}
+                    ]
+                  },
             } ],
             "InstanceType" : {"Ref" : "instype"},
             "Tags" : [{"Key" : "Name", "Value" : "awsami1"}]
-          }
-    }
+          },
+        },
   },
   "Outputs" : {
     "SG1" :{
