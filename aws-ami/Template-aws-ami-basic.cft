@@ -151,6 +151,25 @@
               "SubnetId" : {"Ref" : "Subnet1"}
             } ],
             "InstanceType" : {"Ref" : "instype"},
+            "UserData" : {
+              "Fn::Base64" : {
+                    "Fn::Join" : [ "", [
+                      "#!/bin/bash -ex\n",
+                      "yum update -y\n",
+                      "yum install -y httpd php mysql-server php-mysqlnd\n",
+                      "systemctl enable httpd\n",
+                      "systemctl start httpd\n",
+                      "usermod -a -G apache ec2-user\n",
+                      "chown -R ec2-user:apache /var/www\n",
+                      "chmod 2775 /var/www\n",
+                      "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
+                      "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                      "echo \"<?php echo '<h2>Welcome </h2>'; ?>\" > /var/www/html/phpinfo.php\n"
+                      
+                                      ]
+                    ]
+                }
+          },
             "Tags" : [{"Key" : "Name", "Value" : "awsami1"}]
           }
     }
