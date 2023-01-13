@@ -242,6 +242,12 @@
     "NetworkLoadBalancer": {
       "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
       "Properties": {
+        "LoadBalancerAttributes": [
+          {
+            "Key": "load_balancing.cross_zone.enabled",
+            "Value": true
+          }
+        ],
         "Name": { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "NLB" ] ] } ,
         "Scheme": "internet-facing",
         "Subnets": [
@@ -268,10 +274,6 @@
           {
             "Key": "deregistration_delay.timeout_seconds",
             "Value": 1
-          },
-          {
-            "Key": "load_balancing.cross_zone.enabled",
-            "Value": true
           }
         ],
         "Targets": [
