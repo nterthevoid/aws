@@ -267,7 +267,11 @@
         "TargetGroupAttributes": [
           {
             "Key": "deregistration_delay.timeout_seconds",
-            "Value": 60
+            "Value": 1
+          },
+          {
+            "Key": "load_balancing.cross_zone.enabled",
+            "Value": true
           }
         ],
         "Targets": [
