@@ -1,2 +1,21 @@
-# Sample templates for various AWS linux AMI deploymnets
+# Sample templates for various AWS linux AMI deployments
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Credit / rights
+Sample video Countdown.mp4 is from Pixabay's video  Thank you MCZerrill for its creation
+Vault.png is from Bethesda Software's game Fallout 3.  Thanks to Bethesda for creating such a great game... 
+
  
