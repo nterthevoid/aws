@@ -434,7 +434,7 @@
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsVPC2ami2"}]
+            "Tags" : [{"Key" : "Name", "Value" : "awsVPC2ami1"}]
           }
     },
     "awsamiVPC1int1" : {
