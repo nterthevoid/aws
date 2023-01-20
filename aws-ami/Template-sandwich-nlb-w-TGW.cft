@@ -434,7 +434,7 @@
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsVPC1ami2"}]
+            "Tags" : [{"Key" : "Name", "Value" : "awsVPC2ami2"}]
           }
     },
     "awsamiVPC1int1" : {
@@ -485,7 +485,8 @@
           {"Ref" : "SubnetVPC1pub2"}
         ],
         "Type": "network"
-      }
+      },
+     "DependsOn" : [ "IGW1VPC1" ]
     },
     "NetworkLoadBalancerTargetGroupIng": {
       "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
@@ -550,7 +551,8 @@
           {"Ref" : "SubnetVPC1priv2"}
         ],
         "Type": "network"
-      }
+      },
+      "DependsOn" : [ "IGW1VPC1" ]
     },
     "NetworkLoadBalancerTargetGroupEng": {
       "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
