@@ -65,12 +65,18 @@
     "vpc1" : {
       "Type" : "AWS::EC2::VPC",
       "Properties": {
-          "CidrBlock": "10.0.0.0/16"
-                  },
-          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "VPC" ] ] } }]
-                
+          "CidrBlock": "10.0.0.0/16",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "VPC1" ] ] } }]
+                  }
     },
-    "Subnetpub1": {
+    "vpc2" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties": {
+          "CidrBlock": "10.1.0.0/16",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "VPC2" ] ] } }]
+                  }
+    },
+    "SubnetVPC1pub1": {
         "Type": "AWS::EC2::Subnet",
         "Properties": {
             "VpcId": {
@@ -78,10 +84,10 @@
             },
             "CidrBlock": "10.0.0.0/24",
             "AvailabilityZone" : "us-east-1a",
-            "Tags" : [{"Key" : "Name", "Value" : "Subnetpub1"}]
+            "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1pub1"}]
         }
     },
-    "Subnetpub2": {
+    "SubnetVPC1pub2": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
           "VpcId": {
@@ -89,10 +95,10 @@
           },
           "CidrBlock": "10.0.1.0/24",
           "AvailabilityZone" : "us-east-1b",
-          "Tags" : [{"Key" : "Name", "Value" : "Subnetpub2"}]
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1pub2"}]
       }
     },
-    "Subnetpriv1": {
+    "SubnetVPC1priv1": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
           "VpcId": {
@@ -100,10 +106,10 @@
           },
           "CidrBlock": "10.0.3.0/24",
           "AvailabilityZone" : "us-east-1a",
-          "Tags" : [{"Key" : "Name", "Value" : "Subnetpriv1"}]
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1priv1"}]
       }
     },
-    "Subnetpriv2": {
+    "SubnetVPC1priv2": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
           "VpcId": {
@@ -111,11 +117,21 @@
           },
           "CidrBlock": "10.0.4.0/24",
           "AvailabilityZone" : "us-east-1b",
-          "Tags" : [{"Key" : "Name", "Value" : "Subnetpriv2"}]
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1priv2"}]
       }
     },
-
-    "SG1" : {
+    "SubnetVPC2pub1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+          "VpcId": {
+              "Ref": "vpc2"
+          },
+          "CidrBlock": "10.1.0.0/24",
+          "AvailabilityZone" : "us-east-1b",
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC2pub1"}]
+      }
+    },
+    "SG1VCP1" : {
               "Type" : "AWS::EC2::SecurityGroup",
               "Properties" : {
                   "GroupDescription" : "SECGroup",
@@ -132,124 +148,196 @@
                   }
                 }
     },
-    "IGW1" : {
+    "SG1VCP2" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+          "GroupDescription" : "SECGroup",
+          "SecurityGroupEgress" : [ {
+              "CidrIp" : "0.0.0.0/0",
+              "IpProtocol" : "-1"
+                }
+                 ],
+          "SecurityGroupIngress" : [
+                      { "CidrIp" : { "Ref" : "Addpupip"}, "IpProtocol" : "-1", "ToPort" : "22" }
+                      ],
+          "VpcId": {
+              "Ref": "vpc2"
+          }
+        }
+      },
+    "IGW1VPC1" : {
       "Type" : "AWS::EC2::InternetGateway",
       "Properties" : {
-        "Tags" : [{"Key" : "Name", "Value" : "IGW1"}]
+        "Tags" : [{"Key" : "Name", "Value" : "IGW1VPC1"}]
       }
     },
-    "IGWAttach":{
+    "IGW1VPC2" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {
+        "Tags" : [{"Key" : "Name", "Value" : "IGW1VPC2"}]
+      }
+    },
+    "IGWAttachVPC1":{
       "Type" : "AWS::EC2::VPCGatewayAttachment",
         "Properties": {
-          "InternetGatewayId" : {"Ref":"IGW1"},
+          "InternetGatewayId" : {"Ref":"IGW1VPC1"},
           "VpcId" : {"Ref":"vpc1"}
       }
     },
-    "RTblpub1": {
-      "Type" : "AWS::EC2::RouteTable",
-      "Properties" : {
-        "VpcId": {
-            "Ref": "vpc1"
-        },
-       "Tags" : [{"Key" : "Name", "Value" : "RTblpub1"}]
-        }
-    },
-    "RTblpub2": {
-      "Type" : "AWS::EC2::RouteTable",
-      "Properties" : {
-        "VpcId": {
-            "Ref": "vpc1"
-        },
-        "Tags" : [{"Key" : "Name", "Value" : "RTblpub2"}]
-        }
-    },
-    "RTblpriv1": {
-      "Type" : "AWS::EC2::RouteTable",
-      "Properties" : {
-        "VpcId": {
-            "Ref": "vpc1"
-        },
-        "Tags" : [{"Key" : "Name", "Value" : "RTblpriv1"}]
-        }
-    },
-    "RTblpriv2": {
-      "Type" : "AWS::EC2::RouteTable",
-      "Properties" : {
-        "VpcId": {
-            "Ref": "vpc1"
-        },
-        "Tags" : [{"Key" : "Name", "Value" : "RTblpriv2"}]
-        }
-    },
-    "RouteSubnetpub1" : {
-       "Type" : "AWS::EC2::Route",
-       "Properties" : {
-          "RouteTableId" : { "Ref" : "RTblpub1" },
-          "DestinationCidrBlock" : "0.0.0.0/0",
-          "GatewayId" : { "Ref" : "IGW1" }
-       }
-    },
-    "RouteSubnetpub2" : {
-      "Type" : "AWS::EC2::Route",
-      "Properties" : {
-         "RouteTableId" : { "Ref" : "RTblpub2" },
-         "DestinationCidrBlock" : "0.0.0.0/0",
-         "GatewayId" : { "Ref" : "IGW1" }
+    "IGWAttachVPC2":{
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "InternetGatewayId" : {"Ref":"IGW1VPC2"},
+          "VpcId" : {"Ref":"vpc2"}
       }
     },
-    "RouteSubnetpriv1" : {
+    "RTblVPC1pub1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "vpc1"
+        },
+       "Tags" : [{"Key" : "Name", "Value" : "RTblVPC1pub1"}]
+      }
+    },
+    "RTblVPC1pub2": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+          "Ref": "vpc1"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC1pub2"}]
+      }
+    },
+    "RTblVPC1priv1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "vpc1"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC1priv1"}]
+      }
+    },
+    "RTblVPC1priv2": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "vpc1"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC1priv2"}]
+      }
+    },
+    "RTblVPC2pub1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "vpc2"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC2pub1"}]
+      }
+    },
+    "Route1VPC1Subnetpub1" : {
+       "Type" : "AWS::EC2::Route",
+       "Properties" : {
+          "RouteTableId" : { "Ref" : "RTblVPC1pub1" },
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "GatewayId" : { "Ref" : "IGW1VPC1" }
+       }
+    },
+    "Route1VPC1Subnetpub2" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+         "RouteTableId" : { "Ref" : "RTblVPC1pub2" },
+         "DestinationCidrBlock" : "0.0.0.0/0",
+         "GatewayId" : { "Ref" : "IGW1VPC1" }
+      }
+    },
+    "Route1VPC1Subnetpriv1" : {
     "Type" : "AWS::EC2::Route",
     "Properties" : {
-        "RouteTableId" : { "Ref" : "RTblpriv1" },
+        "RouteTableId" : { "Ref" : "RTblVPC1priv1" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "GatewayId" : { "Ref" : "IGW1" }
+        "GatewayId" : { "Ref" : "IGW1VPC1" }
     }
     },
-    "RouteSubnetpriv2" : {
-    "Type" : "AWS::EC2::Route",
-    "Properties" : {
-      "RouteTableId" : { "Ref" : "RTblpriv2" },
-      "DestinationCidrBlock" : "0.0.0.0/0",
-      "GatewayId" : { "Ref" : "IGW1" }
-    }
+    "Route1VPC1Subnetpriv2" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC1priv2" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "IGW1VPC1" }
+      }
     },
-    "SubnetAssignRTblpub1" : {
+    "Route1VPC2Subnetpub1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC2pub1" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "IGW1VPC2" }
+      }
+    },
+    "Route2VPC2Subnetpub1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC2pub1" },
+        "DestinationCidrBlock" : "10.0.0.0/16",
+        "TransitGatewayId" : { "Ref" : "tgw" }
+      },
+      "DependsOn" : [ "vpc2tgwatc" ]
+    },
+    "Route3VPC2Subnetpub1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC2pub1" },
+        "DestinationCidrBlock" : "8.8.0.0/16",
+        "TransitGatewayId" : { "Ref" : "tgw" }
+      },
+      "DependsOn" : [ "vpc2tgwatc" ]
+    },
+    "SubnetAssignVPC1RTblpub1" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
-          "RouteTableId" : {"Ref" : "RTblpub1"},
-          "SubnetId" : {"Ref" : "Subnetpub1"}
+          "RouteTableId" : {"Ref" : "RTblVPC1pub1"},
+          "SubnetId" : {"Ref" : "SubnetVPC1pub1"}
         }
     },          
-    "SubnetAssignRTblpub2" : {
+    "SubnetAssignVPC1RTblpub2" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
-          "RouteTableId" : {"Ref" : "RTblpub2"},
-          "SubnetId" : {"Ref" : "Subnetpub2"}
+          "RouteTableId" : {"Ref" : "RTblVPC1pub2"},
+          "SubnetId" : {"Ref" : "SubnetVPC1pub2"}
         }
     },          
-    "SubnetAssignRTblpriv1" : {
+    "SubnetAssignVPC1RTblpriv1" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
-          "RouteTableId" : {"Ref" : "RTblpriv1"},
-          "SubnetId" : {"Ref" : "Subnetpriv1"}
+          "RouteTableId" : {"Ref" : "RTblVPC1priv1"},
+          "SubnetId" : {"Ref" : "SubnetVPC1priv1"}
         }
     },          
-    "SubnetAssignRTblpriv2" : {
+    "SubnetAssignVPC1RTblpriv2" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
-          "RouteTableId" : {"Ref" : "RTblpriv2"},
-          "SubnetId" : {"Ref" : "Subnetpriv2"}
+          "RouteTableId" : {"Ref" : "RTblVPC1priv2"},
+          "SubnetId" : {"Ref" : "SubnetVPC1priv2"}
         }
-    },          
-    "awsami1" : {
+    },
+    "SubnetAssignVPC2RTblpub1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPC2pub1"},
+          "SubnetId" : {"Ref" : "SubnetVPC2pub1"}
+        }
+    },           
+    "awsVPC1ami1" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
             "ImageId" : {"Ref" : "LatestAmiId"},
             "NetworkInterfaces": [ {
               "AssociatePublicIpAddress": "true",
               "DeviceIndex": "0",
-              "GroupSet": [{"Ref" : "SG1"}],
-              "SubnetId" : {"Ref" : "Subnetpub1"}
+              "GroupSet": [{"Ref" : "SG1VCP1"}],
+              "SubnetId" : {"Ref" : "SubnetVPC1pub1"}
             } ],
             "InstanceType" : {"Ref" : "instype"},
             "UserData" : {
@@ -274,18 +362,18 @@
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsami1"}]
+            "Tags" : [{"Key" : "Name", "Value" : "awsVPC1ami1"}]
           }
     },
-    "awsami2" : {
+    "awsVPC1ami2" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
             "ImageId" : {"Ref" : "LatestAmiId"},
             "NetworkInterfaces": [ {
               "AssociatePublicIpAddress": "true",
               "DeviceIndex": "0",
-              "GroupSet": [{"Ref" : "SG1"}],
-              "SubnetId" : {"Ref" : "Subnetpriv2"}
+              "GroupSet": [{"Ref" : "SG1VCP1"}],
+              "SubnetId" : {"Ref" : "SubnetVPC1priv2"}
             } ],
             "InstanceType" : {"Ref" : "instype"},
             "UserData" : {
@@ -310,39 +398,75 @@
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsami2"}]
+            "Tags" : [{"Key" : "Name", "Value" : "awsVPC1ami2"}]
           }
     },
-    "awsamiint1" : {
+    "awsVPC2ami1" : {
+      "Type" : "AWS::EC2::Instance",
+        "Properties" : {
+            "ImageId" : {"Ref" : "LatestAmiId"},
+            "NetworkInterfaces": [ {
+              "AssociatePublicIpAddress": "true",
+              "DeviceIndex": "0",
+              "GroupSet": [{"Ref" : "SG1VCP2"}],
+              "SubnetId" : {"Ref" : "SubnetVPC2pub1"}
+            } ],
+            "InstanceType" : {"Ref" : "instype"},
+            "UserData" : {
+              "Fn::Base64" : {
+                    "Fn::Join" : [ "", [
+                      "#!/bin/bash -ex\n",
+                      "yum update -y\n",
+                      "yum install -y httpd php mysql-server php-mysqlnd\n",
+                      "systemctl enable httpd\n",
+                      "systemctl start httpd\n",
+                      "usermod -a -G apache ec2-user\n",
+                      "chown -R ec2-user:apache /var/www\n",
+                      "chmod 2775 /var/www\n",
+                      "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
+                      "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                      "echo \"<?php echo '<h2>Welcome </h2>'; ?>\" > /var/www/html/phpinfo.php\n",
+                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
+                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
+                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n"
+                      
+                                      ]
+                    ]
+                }
+          },
+            "Tags" : [{"Key" : "Name", "Value" : "awsVPC1ami2"}]
+          }
+    },
+    "awsamiVPC1int1" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
           "Description" : "2nd Interface for dual home",
-          "GroupSet": [{"Ref" : "SG1"}],
-          "SubnetId" : {"Ref" : "Subnetpriv1"}
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPC1priv1"}
         }
     },
-    "awsamiint2" : {
+    "awsamiVPC1int2" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
           "Description" : "2nd Interface for dual home",
-          "GroupSet": [{"Ref" : "SG1"}],
-          "SubnetId" : {"Ref" : "Subnetpriv2"}
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPC1priv2"}
         }
     },
     "IntAtach1": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "awsami1"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiint1"}
+          "InstanceId" :  {"Ref" : "awsVPC1ami1"},
+          "NetworkInterfaceId" :  {"Ref" : "awsamiVPC1int1"}
       }
     },
     "IntAtach2": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "awsami2"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiint2"}
+          "InstanceId" :  {"Ref" : "awsVPC1ami2"},
+          "NetworkInterfaceId" :  {"Ref" : "awsamiVPC1int2"}
       }
     },
     "NetworkLoadBalancerIng": {
@@ -357,8 +481,8 @@
         "Name": { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "NLBIng" ] ] } ,
         "Scheme": "internet-facing",
         "Subnets": [
-          {"Ref" : "Subnetpub1"},
-          {"Ref" : "Subnetpub2"}
+          {"Ref" : "SubnetVPC1pub1"},
+          {"Ref" : "SubnetVPC1pub2"}
         ],
         "Type": "network"
       }
@@ -385,11 +509,11 @@
         ],
         "Targets": [
           {
-            "Id": { "Fn::GetAtt" : [ "awsami1", "PrivateIp" ] },      
+            "Id": { "Fn::GetAtt" : [ "awsVPC1ami1", "PrivateIp" ] },      
             "Port": 80
           },
           {
-            "Id": { "Fn::GetAtt" : [ "awsami2", "PrivateIp" ] },      
+            "Id": { "Fn::GetAtt" : [ "awsVPC1ami2", "PrivateIp" ] },      
             "Port": 80
           }
         ],
@@ -422,8 +546,8 @@
         "Name": { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "NLBEng" ] ] } ,
         "Scheme": "internal",
         "Subnets": [
-          {"Ref" : "Subnetpriv1"},
-          {"Ref" : "Subnetpriv2"}
+          {"Ref" : "SubnetVPC1priv1"},
+          {"Ref" : "SubnetVPC1priv2"}
         ],
         "Type": "network"
       }
@@ -450,11 +574,11 @@
         ],
         "Targets": [
           {
-            "Id": { "Fn::GetAtt" : [ "awsami1", "PrivateIp" ] },      
+            "Id": { "Fn::GetAtt" : [ "awsVPC1ami1", "PrivateIp" ] },      
             "Port": 80
           },
           {
-            "Id": { "Fn::GetAtt" : [ "awsami2", "PrivateIp" ] },      
+            "Id": { "Fn::GetAtt" : [ "awsVPC1ami2", "PrivateIp" ] },      
             "Port": 80
           }
         ],
@@ -474,14 +598,52 @@
         "Port": "80",
         "Protocol": "TCP"
       }
+    },
+    "tgw": {
+      "Type" : "AWS::EC2::TransitGateway",
+        "Properties" : {
+                        "AutoAcceptSharedAttachments" : "enable",
+                        "DefaultRouteTableAssociation" : "enable",
+                        "DefaultRouteTablePropagation" : "enable",
+                        "Description" : "TGW",
+                        "DnsSupport" : "enable",
+                        "MulticastSupport" : "disable",
+                        "Tags" : [
+                              {"Key" : "Name", "Value" : "tgw"}
+                        ],
+                        "TransitGatewayCidrBlocks" : [ "10.0.3.0/24", "10.0.4.0/24"],
+                        "VpnEcmpSupport" : "enable"
+                      }
+    },
+    "vpc1tgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+          "SubnetIds" : [ {"Ref": "SubnetVPC1priv1"},{"Ref": "SubnetVPC1priv2"}],
+          "Tags" : [
+                {"Key" : "Name", "Value" : "tgwatc"}
+          ],
+          "TransitGatewayId" : {"Ref" : "tgw"},
+          "VpcId" : {"Ref" : "vpc1"}
+        }
+    },
+    "vpc2tgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+          "SubnetIds" : [ {"Ref": "SubnetVPC2pub1"}],
+          "Tags" : [
+                {"Key" : "Name", "Value" : "vpc2tgwatc"}
+          ],
+          "TransitGatewayId" : {"Ref" : "tgw"},
+          "VpcId" : {"Ref" : "vpc2"}
+        }
     }
   },
   "Outputs" : {
-    "SG1" :{
-      "Value": {"Ref" : "SG1"}
+    "SG1VCP1" :{
+      "Value": {"Ref" : "SG1VCP1"}
     },
-    "Subnetpub1" :{
-      "Value": {"Ref" : "Subnetpub1"}
+    "SubnetVPC1pub1" :{
+      "Value": {"Ref" : "SubnetVPC1pub1"}
     },
     "vpc1" :{
       "Value": {"Ref" : "vpc1"}
@@ -489,8 +651,8 @@
     "LatestAmiId" :{
       "Value": {"Ref" : "LatestAmiId"}
     },
-    "awsami1" :{
-      "Value": {"Ref" : "awsami1"}
+    "awsVPC1ami1" :{
+      "Value": {"Ref" : "awsVPC1ami1"}
     }
   }
 }
