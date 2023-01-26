@@ -1,10 +1,9 @@
-"#load_balancer=true",
-"#junos-config",
-
-"system {",
-"name-server {"'
-"8.8.8.8
-"}
+load_balancer=true
+junos-config
+system {
+name-server {
+8.8.8.8
+}
  syslog {
  file messages {
  any any;
@@ -46,7 +45,6 @@ security {
  rule rule1 {
  match {
  destination-address 0.0.0.0/0;
-
 destination-port {
  80;
  }
@@ -90,11 +88,6 @@ destination-port {
  ge-0/0/1.0;
  }
  }
-
-
-
-
-
 security-zone untrust {
  host-inbound-traffic {
  system-services {
@@ -129,4 +122,7 @@ routing-instances {
  instance-type virtual-router;
  interface ge-0/0/0.0;
  interface ge-0/0/1.0;
- } }"
+ } }
+
+
+
