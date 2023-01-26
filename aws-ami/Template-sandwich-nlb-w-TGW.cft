@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description" : "Basic AWS AMi deploy",
+  "Description" : "trying LB for egress testing of DG of 0.0.0.0/0. changing to TGW appliacne mode with Basic AWS AMi deploy",
   "Metadata" : {
     "AWS::CloudFormation::Interface" : {
       "ParameterGroups" : [
@@ -60,6 +60,11 @@
          "Type" : "AWS::EC2::KeyPair::KeyName",
          "Default": "delme"
      }
+  },
+  "Mappings" : {
+    "RegionMap" : {
+      "us-east-1"       : {"srxconsec" : "ami-0053ad002ebd65df2", "srxbyol" : "ami-07e368d1e5ca0f5a6" }
+    }
   },
   "Resources" : {
     "vpc1" : {
@@ -165,6 +170,26 @@
           }
         }
       },
+    "SGBaseIngressSG1VCP1": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "CidrIp" : "10.0.0.0/8",
+                    "GroupId": {
+                        "Ref": "SG1VCP1"
+                        },
+                      "IpProtocol": "-1"
+                }
+    },
+    "SGBaseIngressSG1VCP2": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "CidrIp" : "10.0.0.0/8",
+                    "GroupId": {
+                        "Ref": "SG1VCP2"
+                        },
+                      "IpProtocol": "-1"
+                }
+    },
     "IGW1VPC1" : {
       "Type" : "AWS::EC2::InternetGateway",
       "Properties" : {
@@ -257,17 +282,35 @@
     "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPC1priv1" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "GatewayId" : { "Ref" : "IGW1VPC1" }
+        "NetworkInterfaceId" : { "Ref" : "vsrx1int1" }
     }
+    },
+    "Route2VPC1Subnetpriv1" : {
+    "Type" : "AWS::EC2::Route",
+    "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC1priv1" },
+        "DestinationCidrBlock" : "10.1.0.0/16",
+        "TransitGatewayId" : { "Ref" : "tgw" }
+      },
+    "DependsOn" : [ "vpc1tgwatc" ]
     },
     "Route1VPC1Subnetpriv2" : {
       "Type" : "AWS::EC2::Route",
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPC1priv2" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "GatewayId" : { "Ref" : "IGW1VPC1" }
+        "NetworkInterfaceId" : { "Ref" : "vsrx2int1" }
       }
     },
+    "Route2VPC1Subnetpriv2" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+          "RouteTableId" : { "Ref" : "RTblVPC1priv2" },
+          "DestinationCidrBlock" : "10.1.0.0/16",
+          "TransitGatewayId" : { "Ref" : "tgw" }
+      },
+      "DependsOn" : [ "vpc1tgwatc" ]
+      },
     "Route1VPC2Subnetpub1" : {
       "Type" : "AWS::EC2::Route",
       "Properties" : {
@@ -289,7 +332,16 @@
       "Type" : "AWS::EC2::Route",
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPC2pub1" },
-        "DestinationCidrBlock" : "8.8.0.0/16",
+        "DestinationCidrBlock" : "8.8.8.8/32",
+        "TransitGatewayId" : { "Ref" : "tgw" }
+      },
+      "DependsOn" : [ "vpc2tgwatc" ]
+    },
+    "Route4VPC2Subnetpub1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC2pub1" },
+        "DestinationCidrBlock" : "140.82.114.4/32",
         "TransitGatewayId" : { "Ref" : "tgw" }
       },
       "DependsOn" : [ "vpc2tgwatc" ]
@@ -328,7 +380,69 @@
           "RouteTableId" : {"Ref" : "RTblVPC2pub1"},
           "SubnetId" : {"Ref" : "SubnetVPC2pub1"}
         }
-    },           
+    },
+    "vSRX1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxbyol"]},
+          "KeyName": {"Ref": "keypair"},
+          "InstanceType": "c5.2xlarge",
+          "NetworkInterfaces": [ {
+            "AssociatePublicIpAddress": "true",
+            "DeviceIndex": "0",
+            "GroupSet": [{"Ref" : "SG1VCP1"}],
+            "SubnetId" : {"Ref" : "SubnetVPC1pub1"}
+          } ],
+          "UserData": {
+                "Fn::Base64": {
+                "Fn::Join": [
+                "\n",
+                [
+                  "#load_balancer=true"
+            ]
+          ]
+        }
+          },
+          "Tags" : [
+            {
+              "Key" : "Name",
+              "Value" : "vSRX1"
+            }
+          ]
+        },
+        "DependsOn" : "SG1VCP1"
+    },
+    "vSRX2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxbyol"]},
+          "KeyName": {"Ref": "keypair"},
+          "InstanceType": "c5.2xlarge",
+          "NetworkInterfaces": [ {
+            "AssociatePublicIpAddress": "true",
+            "DeviceIndex": "0",
+            "GroupSet": [{"Ref" : "SG1VCP1"}],
+            "SubnetId" : {"Ref" : "SubnetVPC1pub2"}
+          } ],
+          "UserData": {
+                "Fn::Base64": {
+                "Fn::Join": [
+                "\n",
+                [
+                  "#load_balancer=true"
+            ]
+          ]
+        }
+          },
+          "Tags" : [
+            {
+              "Key" : "Name",
+              "Value" : "vSRX2"
+            }
+          ]
+        },
+        "DependsOn" : "SG1VCP1"
+    },
     "awsVPC1ami1" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
@@ -362,43 +476,7 @@
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsVPC1ami1"}]
-          }
-    },
-    "awsVPC1ami2" : {
-      "Type" : "AWS::EC2::Instance",
-        "Properties" : {
-            "ImageId" : {"Ref" : "LatestAmiId"},
-            "NetworkInterfaces": [ {
-              "AssociatePublicIpAddress": "true",
-              "DeviceIndex": "0",
-              "GroupSet": [{"Ref" : "SG1VCP1"}],
-              "SubnetId" : {"Ref" : "SubnetVPC1priv2"}
-            } ],
-            "InstanceType" : {"Ref" : "instype"},
-            "UserData" : {
-              "Fn::Base64" : {
-                    "Fn::Join" : [ "", [
-                      "#!/bin/bash -ex\n",
-                      "yum update -y\n",
-                      "yum install -y httpd php mysql-server php-mysqlnd\n",
-                      "systemctl enable httpd\n",
-                      "systemctl start httpd\n",
-                      "usermod -a -G apache ec2-user\n",
-                      "chown -R ec2-user:apache /var/www\n",
-                      "chmod 2775 /var/www\n",
-                      "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
-                      "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
-                      "echo \"<?php echo '<h2>Welcome </h2>'; ?>\" > /var/www/html/phpinfo.php\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n"
-                      
-                                      ]
-                    ]
-                }
-          },
-            "Tags" : [{"Key" : "Name", "Value" : "awsVPC1ami2"}]
+            "Tags" : [{"Key" : "Name", "Value" : "awsami1"}]
           }
     },
     "awsVPC2ami1" : {
@@ -409,6 +487,7 @@
               "AssociatePublicIpAddress": "true",
               "DeviceIndex": "0",
               "GroupSet": [{"Ref" : "SG1VCP2"}],
+              "PrivateIpAddress" : "10.1.0.10",
               "SubnetId" : {"Ref" : "SubnetVPC2pub1"}
             } ],
             "InstanceType" : {"Ref" : "instype"},
@@ -425,11 +504,14 @@
                       "chmod 2775 /var/www\n",
                       "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
                       "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                      "ip route add 10.0.0.0/16 via 10.1.0.1\n",
+                      "ip route add 8.8.8.8/32 via 10.1.0.1\n",
+                      "ip route add 140.82.114.4/32 via 10.1.0.1\n",
                       "echo \"<?php echo '<h2>Welcome </h2>'; ?>\" > /var/www/html/phpinfo.php\n",
                       "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
                       "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
                       "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n"
-                      
+
                                       ]
                     ]
                 }
@@ -437,36 +519,55 @@
             "Tags" : [{"Key" : "Name", "Value" : "awsVPC2ami1"}]
           }
     },
+    "vsrx1int1" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "2nd Interface for dual home",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPC1priv1"},
+          "SourceDestCheck" : "false"
+        }
+    },
+    "vsrx2int1" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "2nd Interface for dual home",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPC1priv2"},
+          "SourceDestCheck" : "false"
+        }
+    },
     "awsamiVPC1int1" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
           "Description" : "2nd Interface for dual home",
           "GroupSet": [{"Ref" : "SG1VCP1"}],
-          "SubnetId" : {"Ref" : "SubnetVPC1priv1"}
-        }
-    },
-    "awsamiVPC1int2" : {
-      "Type" : "AWS::EC2::NetworkInterface",
-      "Properties" : {
-          "Description" : "2nd Interface for dual home",
-          "GroupSet": [{"Ref" : "SG1VCP1"}],
-          "SubnetId" : {"Ref" : "SubnetVPC1priv2"}
+          "SubnetId" : {"Ref" : "SubnetVPC1priv1"},
+          "SourceDestCheck" : "false"
         }
     },
     "IntAtach1": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "awsVPC1ami1"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiVPC1int1"}
+          "InstanceId" :  {"Ref" : "vSRX1"},
+          "NetworkInterfaceId" :  {"Ref" : "vsrx1int1"}
       }
     },
     "IntAtach2": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "awsVPC1ami2"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiVPC1int2"}
+          "InstanceId" :  {"Ref" : "vSRX2"},
+          "NetworkInterfaceId" :  {"Ref" : "vsrx2int1"}
+      }
+    },
+    "IntAtach3": {
+      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+        "Properties" : {
+          "DeviceIndex" : "1",
+          "InstanceId" :  {"Ref" : "awsVPC1ami1"},
+          "NetworkInterfaceId" :  {"Ref" : "awsamiVPC1int1"}
       }
     },
     "NetworkLoadBalancerIng": {
@@ -492,14 +593,13 @@
       "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
       "Properties": {
         "Name": { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TargetGroupIng" ] ] } ,
-        "Port": 80,
+        "Port": 22,
         "Protocol": "TCP",
         "VpcId": {"Ref" : "vpc1" },
         "HealthCheckEnabled": true,
         "HealthCheckIntervalSeconds": 5,
-        "HealthCheckPath" : "/index.php",
-        "HealthCheckPort": 80,
-        "HealthCheckProtocol": "HTTP",
+        "HealthCheckPort": 22,
+        "HealthCheckProtocol": "TCP",
         "HealthCheckTimeoutSeconds": 2,
         "HealthyThresholdCount": 3,
         "TargetGroupAttributes": [
@@ -510,12 +610,12 @@
         ],
         "Targets": [
           {
-            "Id": { "Fn::GetAtt" : [ "awsVPC1ami1", "PrivateIp" ] },      
-            "Port": 80
+            "Id": { "Fn::GetAtt" : [ "vSRX1", "PrivateIp" ] },      
+            "Port": 22
           },
           {
-            "Id": { "Fn::GetAtt" : [ "awsVPC1ami2", "PrivateIp" ] },      
-            "Port": 80
+            "Id": { "Fn::GetAtt" : [ "vSRX2", "PrivateIp" ] },      
+            "Port": 22
           }
         ],
         "TargetType": "ip"
@@ -531,72 +631,6 @@
           }
         ],
         "LoadBalancerArn": {"Ref" : "NetworkLoadBalancerIng"},
-        "Port": "80",
-        "Protocol": "TCP"
-      }
-    },
-    "NetworkLoadBalancerEng": {
-      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
-      "Properties": {
-        "LoadBalancerAttributes": [
-          {
-            "Key": "load_balancing.cross_zone.enabled",
-            "Value": true
-          }
-        ],
-        "Name": { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "NLBEng" ] ] } ,
-        "Scheme": "internal",
-        "Subnets": [
-          {"Ref" : "SubnetVPC1priv1"},
-          {"Ref" : "SubnetVPC1priv2"}
-        ],
-        "Type": "network"
-      },
-      "DependsOn" : [ "IGW1VPC1" ]
-    },
-    "NetworkLoadBalancerTargetGroupEng": {
-      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
-      "Properties": {
-        "Name": { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TargetGroupEng" ] ] } ,
-        "Port": 80,
-        "Protocol": "TCP",
-        "VpcId": {"Ref" : "vpc1" },
-        "HealthCheckEnabled": true,
-        "HealthCheckIntervalSeconds": 5,
-        "HealthCheckPath" : "/index.php",
-        "HealthCheckPort": 80,
-        "HealthCheckProtocol": "HTTP",
-        "HealthCheckTimeoutSeconds": 2,
-        "HealthyThresholdCount": 3,
-        "TargetGroupAttributes": [
-          {
-            "Key": "deregistration_delay.timeout_seconds",
-            "Value": 1
-          }
-        ],
-        "Targets": [
-          {
-            "Id": { "Fn::GetAtt" : [ "awsVPC1ami1", "PrivateIp" ] },      
-            "Port": 80
-          },
-          {
-            "Id": { "Fn::GetAtt" : [ "awsVPC1ami2", "PrivateIp" ] },      
-            "Port": 80
-          }
-        ],
-        "TargetType": "ip"
-      }
-    },
-    "NetworkLoadBalancerListenerEng": {
-      "Type": "AWS::ElasticLoadBalancingV2::Listener",
-      "Properties": {
-        "DefaultActions": [
-          {
-            "Type": "forward",
-            "TargetGroupArn": {"Ref" : "NetworkLoadBalancerTargetGroupEng"}
-          }
-        ],
-        "LoadBalancerArn": {"Ref" : "NetworkLoadBalancerEng"},
         "Port": "80",
         "Protocol": "TCP"
       }
@@ -653,8 +687,8 @@
     "LatestAmiId" :{
       "Value": {"Ref" : "LatestAmiId"}
     },
-    "awsVPC1ami1" :{
-      "Value": {"Ref" : "awsVPC1ami1"}
+    "vSRX1" :{
+      "Value": {"Ref" : "vSRX1"}
     }
   }
 }
