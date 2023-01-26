@@ -396,9 +396,10 @@
           "UserData": {
                 "Fn::Base64": {
                 "Fn::Join": [
-                "\n",
+                "",
                 [
-                  "#load_balancer=true"
+                  "#load_balancer=true\n"
+
             ]
           ]
         }
@@ -427,9 +428,9 @@
           "UserData": {
                 "Fn::Base64": {
                 "Fn::Join": [
-                "\n",
+                "",
                 [
-                  "#load_balancer=true"
+                  "#load_balancer=true\n"
             ]
           ]
         }
@@ -447,6 +448,7 @@
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
             "ImageId" : {"Ref" : "LatestAmiId"},
+            "KeyName": {"Ref": "keypair"},
             "NetworkInterfaces": [ {
               "AssociatePublicIpAddress": "true",
               "DeviceIndex": "0",
