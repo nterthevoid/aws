@@ -102,7 +102,7 @@
               }
             ]
           },  
-          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1pub1"}]
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1mngt1"}]
       }
     },
     "SubnetVPC1mngt2": {
@@ -120,7 +120,7 @@
               }
             ]
           },  
-          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1pub1"}]
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC1mngt2"}]
       }
     },
 
@@ -294,6 +294,24 @@
           "VpcId" : {"Ref":"vpc2"}
       }
     },
+    "RTblVPC1mngt1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "vpc1"
+        },
+       "Tags" : [{"Key" : "Name", "Value" : "RTblVPC1mngt1"}]
+      }
+    },
+    "RTblVPC1mngt2": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+          "Ref": "vpc1"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC1mngt2"}]
+      }
+    },
     "RTblVPC1pub1": {
       "Type" : "AWS::EC2::RouteTable",
       "Properties" : {
@@ -339,6 +357,22 @@
         "Tags" : [{"Key" : "Name", "Value" : "RTblVPC2pub1"}]
       }
     },
+    "Route1VPC1Subnetmngt1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+         "RouteTableId" : { "Ref" : "RTblVPC1mngt1" },
+         "DestinationCidrBlock" : "0.0.0.0/0",
+         "GatewayId" : { "Ref" : "IGW1VPC1" }
+      }
+   },
+   "Route1VPC1Subnetmngt2" : {
+     "Type" : "AWS::EC2::Route",
+     "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC1mngt2" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "IGW1VPC1" }
+     }
+   },
     "Route1VPC1Subnetpub1" : {
        "Type" : "AWS::EC2::Route",
        "Properties" : {
@@ -424,6 +458,20 @@
       },
       "DependsOn" : [ "vpc2tgwatc" ]
     },
+    "SubnetAssignVPC1RTblmngt1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPC1mngt1"},
+          "SubnetId" : {"Ref" : "SubnetVPC1mngt1"}
+        }
+    },          
+    "SubnetAssignVPC1RTblmngt2" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPC1mngt2"},
+          "SubnetId" : {"Ref" : "SubnetVPC1mngt2"}
+        }
+    },          
     "SubnetAssignVPC1RTblpub1" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
