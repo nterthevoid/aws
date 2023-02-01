@@ -29,12 +29,7 @@
         "parmurl" : { "default" : "S3 url for nested stacks" },
         "LatestAmiId" : { "default" : "Select an AMI Id to used " },
         "instype" : { "default" : "Select an Instacne type to be used" },
-        "Addpupip" : { "default" : "Enter the Public addresses that shoud be allowed for ingress access" },
-        "keypair" : { "default" : "Select a Key Pair to be used" },
-        "vpcid" : { "default" : "Select Which VPC should this be deployed to?" },
-        "subnetid" : { "default" : "Select Which Subnet should this be deployed to?" },
-        "sgid" : { "default" : "Select Which Security Group to be used ?" },
-        "response" : { "default" : "Select Yes, to create new VPC, subnet and Security Group ?" }
+        "Addpupip" : { "default" : "Enter the Public addresses that shoud be allowed for ingress access" }
       }
     }
   },
@@ -55,18 +50,25 @@
      "Addpupip": {
          "Type": "String",
          "Default": "0.0.0.0/0"
-     },
-     "keypair": {
-         "Type" : "AWS::EC2::KeyPair::KeyName",
-         "Default": "delme"
      }
   },
   "Mappings" : {
     "RegionMap" : {
-      "us-east-1"       : {"srxconsec" : "ami-0053ad002ebd65df2", "srxbyol" : "ami-07e368d1e5ca0f5a6" }
+      "us-east-1"       : {"srxconsec" : "ami-0053ad002ebd65df2", "srxbyol" : "ami-07e368d1e5ca0f5a6" },
+      "us-east-2"       : {"srxbyol" : "ami-0077e5411c5221898", "srxconsec" : "ami-09055beb4db491f2f" },
+      "us-west-1"       : {"srxbyol" : "ami-039c23a4a1674e6da", "srxconsec" : "ami-0c6dd3134e2afa589" },
+      "us-west-2"       : {"srxconsec" : "ami-03859f9b533e5d520", "srxbyol" : "ami-098b9fff1e4cc8791" }
     }
   },
   "Resources" : {
+    "keypair" : {
+      "Type" : "AWS::EC2::KeyPair",
+      "Properties" : {
+          "KeyName" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "kp" ] ] },
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "kp" ] ] } }]
+
+        }
+    },
     "vpc1" : {
       "Type" : "AWS::EC2::VPC",
       "Properties": {
@@ -282,7 +284,7 @@
     "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPC1priv1" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "NetworkInterfaceId" : { "Ref" : "vsrx1int1" }
+        "NetworkInterfaceId" : { "Ref" : "int1awsVPC1ami1" }
     }
     },
     "Route2VPC1Subnetpriv1" : {
@@ -299,7 +301,7 @@
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPC1priv2" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "NetworkInterfaceId" : { "Ref" : "vsrx2int1" }
+        "NetworkInterfaceId" : { "Ref" : "int1awsVPC1ami2" }
       }
     },
     "Route2VPC1Subnetpriv2" : {
@@ -381,68 +383,6 @@
           "SubnetId" : {"Ref" : "SubnetVPC2pub1"}
         }
     },
-    "vSRX1": {
-      "Type": "AWS::EC2::Instance",
-      "Properties": {
-        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxbyol"]},
-          "KeyName": {"Ref": "keypair"},
-          "InstanceType": "c5.2xlarge",
-          "NetworkInterfaces": [ {
-            "AssociatePublicIpAddress": "true",
-            "DeviceIndex": "0",
-            "GroupSet": [{"Ref" : "SG1VCP1"}],
-            "SubnetId" : {"Ref" : "SubnetVPC1pub1"}
-          } ],
-          "UserData": {
-                "Fn::Base64": {
-                "Fn::Join": [
-                "\n",
-                [
-                  "#load_balancer=true"
-            ]
-          ]
-        }
-          },
-          "Tags" : [
-            {
-              "Key" : "Name",
-              "Value" : "vSRX1"
-            }
-          ]
-        },
-        "DependsOn" : "SG1VCP1"
-    },
-    "vSRX2": {
-      "Type": "AWS::EC2::Instance",
-      "Properties": {
-        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxbyol"]},
-          "KeyName": {"Ref": "keypair"},
-          "InstanceType": "c5.2xlarge",
-          "NetworkInterfaces": [ {
-            "AssociatePublicIpAddress": "true",
-            "DeviceIndex": "0",
-            "GroupSet": [{"Ref" : "SG1VCP1"}],
-            "SubnetId" : {"Ref" : "SubnetVPC1pub2"}
-          } ],
-          "UserData": {
-                "Fn::Base64": {
-                "Fn::Join": [
-                "\n",
-                [
-                  "#load_balancer=true"
-            ]
-          ]
-        }
-          },
-          "Tags" : [
-            {
-              "Key" : "Name",
-              "Value" : "vSRX2"
-            }
-          ]
-        },
-        "DependsOn" : "SG1VCP1"
-    },
     "awsVPC1ami1" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
@@ -477,13 +417,38 @@
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsami1"}]
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "awsVPC1ami1" ] ] } }]
+          }
+    },
+    "awsVPC1ami2" : {
+      "Type" : "AWS::EC2::Instance",
+        "Properties" : {
+            "ImageId" : {"Ref" : "LatestAmiId"},
+            "KeyName": {"Ref": "keypair"},
+            "NetworkInterfaces": [ {
+              "AssociatePublicIpAddress": "true",
+              "DeviceIndex": "0",
+              "GroupSet": [{"Ref" : "SG1VCP1"}],
+              "SubnetId" : {"Ref" : "SubnetVPC1pub2"}
+            } ],
+            "InstanceType" : {"Ref" : "instype"},
+            "UserData" : {
+              "Fn::Base64" : {
+                    "Fn::Join" : [ "", [
+                      "#!/bin/bash -ex\n",
+                      "yum update -y\n"
+                                      ]
+                    ]
+                }
+          },
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "awsVPC1ami2" ] ] } }]
           }
     },
     "awsVPC2ami1" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
             "ImageId" : {"Ref" : "LatestAmiId"},
+            "KeyName": {"Ref": "keypair"},
             "NetworkInterfaces": [ {
               "AssociatePublicIpAddress": "true",
               "DeviceIndex": "0",
@@ -497,30 +462,15 @@
                     "Fn::Join" : [ "", [
                       "#!/bin/bash -ex\n",
                       "yum update -y\n",
-                      "yum install -y httpd php mysql-server php-mysqlnd\n",
-                      "systemctl enable httpd\n",
-                      "systemctl start httpd\n",
-                      "usermod -a -G apache ec2-user\n",
-                      "chown -R ec2-user:apache /var/www\n",
-                      "chmod 2775 /var/www\n",
-                      "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
-                      "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
-                      "ip route add 10.0.0.0/16 via 10.1.0.1\n",
-                      "ip route add 8.8.8.8/32 via 10.1.0.1\n",
-                      "ip route add 140.82.114.4/32 via 10.1.0.1\n",
-                      "echo \"<?php echo '<h2>Welcome </h2>'; ?>\" > /var/www/html/phpinfo.php\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n"
-
+                      "yum install -y httpd php mysql-server php-mysqlnd\n"
                                       ]
                     ]
                 }
           },
-            "Tags" : [{"Key" : "Name", "Value" : "awsVPC2ami1"}]
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "awsVPC2ami1" ] ] } }]
           }
     },
-    "vsrx1int1" : {
+    "int1awsVPC1ami1" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
           "Description" : "2nd Interface for dual home",
@@ -529,7 +479,7 @@
           "SourceDestCheck" : "false"
         }
     },
-    "vsrx2int1" : {
+    "int1awsVPC1ami2" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
           "Description" : "2nd Interface for dual home",
@@ -538,37 +488,20 @@
           "SourceDestCheck" : "false"
         }
     },
-    "awsamiVPC1int1" : {
-      "Type" : "AWS::EC2::NetworkInterface",
-      "Properties" : {
-          "Description" : "2nd Interface for dual home",
-          "GroupSet": [{"Ref" : "SG1VCP1"}],
-          "SubnetId" : {"Ref" : "SubnetVPC1priv1"},
-          "SourceDestCheck" : "false"
-        }
-    },
     "IntAtach1": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "vSRX1"},
-          "NetworkInterfaceId" :  {"Ref" : "vsrx1int1"}
+          "InstanceId" :  {"Ref" : "awsVPC1ami1"},
+          "NetworkInterfaceId" :  {"Ref" : "int1awsVPC1ami1"}
       }
     },
     "IntAtach2": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "vSRX2"},
-          "NetworkInterfaceId" :  {"Ref" : "vsrx2int1"}
-      }
-    },
-    "IntAtach3": {
-      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
-        "Properties" : {
-          "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "awsVPC1ami1"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiVPC1int1"}
+          "InstanceId" :  {"Ref" : "awsVPC1ami2"},
+          "NetworkInterfaceId" :  {"Ref" : "int1awsVPC1ami2"}
       }
     },
     "NetworkLoadBalancerIng": {
@@ -611,11 +544,11 @@
         ],
         "Targets": [
           {
-            "Id": { "Fn::GetAtt" : [ "vSRX1", "PrivateIp" ] },      
+            "Id": { "Fn::GetAtt" : [ "awsVPC1ami1", "PrivateIp" ] },      
             "Port": 22
           },
           {
-            "Id": { "Fn::GetAtt" : [ "vSRX2", "PrivateIp" ] },      
+            "Id": { "Fn::GetAtt" : [ "awsVPC1ami2", "PrivateIp" ] },      
             "Port": 22
           }
         ],
@@ -687,9 +620,6 @@
     },
     "LatestAmiId" :{
       "Value": {"Ref" : "LatestAmiId"}
-    },
-    "vSRX1" :{
-      "Value": {"Ref" : "vSRX1"}
     }
   }
 }
