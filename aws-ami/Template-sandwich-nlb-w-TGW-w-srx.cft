@@ -587,7 +587,7 @@
                     ]
                 }
           },
-          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPC1ami1" ] ] } }]
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPC2ami1" ] ] } }]
           }
     },
     "vsrx1int1" : {
