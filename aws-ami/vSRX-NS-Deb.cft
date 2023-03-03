@@ -1,0 +1,602 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+          "PubIP": {
+              "Type": "String",
+              "Description": "Your public ip.  Needed to allow access to AWS resources.  ",
+              "Default": "0.0.0.0/0"
+          },
+          "vSRXimage": {
+              "Type": "String",
+              "Default": "ami-0665fcb24d58c88f4",
+              "Description": "vSRX images used, BYOL, or PAYG"
+          },
+          "Debimage": {
+              "Type": "String",
+              "Default": "ami-09d246ada0ae2e13c",
+              "Description": "Host on trusted side"
+          }
+    },
+    "Mappings" : {
+        "RegionMap" : {
+          "af-south-1"      : {"deb11" : "ami-0b4776a674c5c551f", "srxbyol" : "ami-0a2e688a31445b549", "srxconsec" : "ami-037080bb90cf778b6" },
+          "eu-north-1"      : {"srxconsec" : "ami-07321998aaa946a53", "srxbyol" : "ami-09548b88850f5ca1e", "deb11" : "ami-0d9d276a588966204" },
+          "ap-south-1"      : {"srxconsec" : "ami-016ad60aed08caa7c", "srxbyol" : "ami-01c700b9d04c54030", "deb11" : "ami-0cfe53c12e0f88918" },
+          "eu-west-3"       : {"deb11" : "ami-03b0b8a211c9e0101", "srxbyol" : "ami-0837ab960bd404712", "srxconsec" : "ami-0efbab929ee4b3cd3" },
+          "eu-west-2"       : {"srxbyol" : "ami-054fae5813e7c04cb", "deb11" : "ami-05db0405ed6c1bfcc", "srxconsec" : "ami-0e55852ad94cb6092" },
+          "eu-south-1"      : {"srxbyol" : "ami-00184114f98526cee", "deb11" : "ami-0df2e19f9fe390aa4", "srxconsec" : "ami-0927de81631caa5fe" },
+          "eu-west-1"       : {"srxbyol" : "ami-00f6803c5a02c5705", "deb11" : "ami-01222432139ebc6e9", "srxconsec" : "ami-0d3825fb8f6c308b9" },
+          "ap-northeast-3"  : {"srxconsec" : "ami-0341aab51a53d0533", "deb11" : "ami-08b3987955bb416a6", "srxbyol" : "ami-0c70a959fa2ee556d" },
+          "ap-northeast-2"  : {"deb11" : "ami-053831b313917dd44", "srxconsec" : "ami-0873520f2195a47ff", "srxbyol" : "ami-08ad4165ccd4e025e" },
+          "me-south-1"      : {"srxconsec" : "ami-06f646bf035dfb4c8", "deb11" : "ami-079285b54d270cbb8", "srxbyol" : "ami-088f0ea419a585f30" },
+          "ap-northeast-1"  : {"srxconsec" : "ami-021e1c447a513c977", "deb11" : "ami-03f50c07c851245c7", "srxbyol" : "ami-0c5d1774c68ac72f6" },
+          "sa-east-1"       : {"srxbyol" : "ami-0351130c640e057e4", "srxconsec" : "ami-0532afe7237cb86e6", "deb11" : "ami-0fed85f73f7672b0e" },
+          "ca-central-1"    : {"srxbyol" : "ami-04342a5aa1583277c", "srxconsec" : "ami-0734c7bd4beaf4858", "deb11" : "ami-0cd0724dde1391bdf" },
+          "ap-east-1"       : {"srxbyol" : "ami-01a677cd66c028e76", "srxconsec" : "ami-058e5f58c83d6d4c3", "deb11" : "ami-0443f634229460ed5" },
+          "ap-southeast-1"  : {"srxconsec" : "ami-002dcc7cbc48aa708", "srxbyol" : "ami-039c1125b33fefc89", "deb11" : "ami-0f78f19516cd4b69c" },
+          "ap-southeast-2"  : {"deb11" : "ami-0b8afc74671c80c19", "srxbyol" : "ami-0bf3916f092c3bb9d", "srxconsec" : "ami-0f44dc3fdcace49ce" },
+          "eu-central-1"    : {"srxbyol" : "ami-02158576afe7ddd92", "deb11" : "ami-0ac700450294174ea", "srxconsec" : "ami-0cca0cac0e30140fc" },
+          "us-east-1"       : {"srxconsec" : "ami-0053ad002ebd65df2", "deb11" : "ami-06ed7917b75fcaf17", "srxbyol" : "ami-07e368d1e5ca0f5a6" },
+          "us-east-2"       : {"srxbyol" : "ami-0077e5411c5221898", "deb11" : "ami-07b77860a9b5d26c0", "srxconsec" : "ami-09055beb4db491f2f" },
+          "us-west-1"       : {"deb11" : "ami-018e1a64cab234352", "srxbyol" : "ami-039c23a4a1674e6da", "srxconsec" : "ami-0c6dd3134e2afa589" },
+          "us-west-2"       : {"srxconsec" : "ami-03859f9b533e5d520", "deb11" : "ami-04b48fa934dbbcf11", "srxbyol" : "ami-098b9fff1e4cc8791" }
+        }
+      },
+    "Resources": {
+        "keypair" : {
+            "Type" : "AWS::EC2::KeyPair",
+            "Properties" : {
+                "KeyName" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "kp" ] ] },
+                "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "kp" ] ] } }]
+    
+            }
+        },
+        "VPCDev": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.255.0.0/16"
+                        }
+        },
+        "Subnet0": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCDev"
+                },
+                "CidrBlock": "10.255.0.0/24",
+                "AvailabilityZone" : {
+                  "Fn::Select" : [
+                    "0",
+                    {
+                      "Fn::GetAZs" : ""
+                    }
+                  ]
+                }
+            }
+        },
+        "Subnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCDev"
+                          },
+                "CidrBlock": "10.255.1.0/24",
+                "AvailabilityZone" : {
+                  "Fn::Select" : [
+                    "0",
+                    {
+                      "Fn::GetAZs" : ""
+                    }
+                  ]
+                }
+            }
+        },
+        "Subnet3": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCDev"
+                          },
+                "CidrBlock": "10.255.3.0/24",
+                "AvailabilityZone" : {
+                  "Fn::Select" : [
+                    "0",
+                    {
+                      "Fn::GetAZs" : ""
+                    }
+                  ]
+                }
+            }
+        },
+        "vSRX1Eth1": {
+          "Type"  : "AWS::EC2::NetworkInterface",
+            "Properties": {
+              "PrivateIpAddress" : "10.255.1.11",
+                "SubnetId": {
+                  "Ref": "Subnet1"
+                    },
+                    "GroupSet" : [
+                      {
+                        "Ref":"SECG1"
+                      }
+                    ],
+                    "SourceDestCheck" : "false"
+                  }
+        },
+        "vSRX1Eth3": {
+          "Type"  : "AWS::EC2::NetworkInterface",
+            "Properties": {
+              "PrivateIpAddress" : "10.255.3.11",
+                "SubnetId": {
+                  "Ref": "Subnet3"
+                    },
+                    "GroupSet" : [
+                      {
+                        "Ref":"SECG1"
+                      }
+                    ],
+                    "SourceDestCheck" : "false"
+              }
+        },
+        "Deb1Eth0": {
+          "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+              "PrivateIpAddress" : "10.255.3.10",
+              "SubnetId": {
+                "Ref": "Subnet3"
+                },
+              "GroupSet" : [
+                  {
+                    "Ref":"SECG1"
+                    }
+              ]
+
+            }
+        },
+        "SECG0" : {
+                  "Type" : "AWS::EC2::SecurityGroup",
+                  "Properties" : {
+                      "GroupDescription" : "DEv-Group",
+                      "SecurityGroupEgress" : [ {
+                          "CidrIp" : "0.0.0.0/0",
+                          "IpProtocol" : "-1"
+                            }
+                             ],
+                      "SecurityGroupIngress" : [
+                                  { "CidrIp" : { "Ref" : "PubIP"}, "IpProtocol" : "-1", "ToPort" : "22" }
+                                  ],
+                      "VpcId": {
+                          "Ref": "VPCDev"
+                      }
+                    }
+                  },
+        "SECG1" : {
+                  "Type" : "AWS::EC2::SecurityGroup",
+                  "Properties" : {
+                      "GroupDescription" : "DEv-Group",
+                      "SecurityGroupEgress" : [ {
+                          "CidrIp" : "0.0.0.0/0",
+                          "IpProtocol" : "-1"
+                            }
+                             ],
+                      "SecurityGroupIngress" : [
+                        { "CidrIp" : { "Ref" : "PubIP"}, "IpProtocol" : "-1", "ToPort" : "22" }
+                                  ],
+                      "VpcId": {
+                          "Ref": "VPCDev"
+                      }
+                    }
+                  },
+        "SGBaseIngress4SECG0": {
+               "Type": "AWS::EC2::SecurityGroupIngress",
+                    "Properties": {
+                        "CidrIp" : "10.255.0.0/16",
+                            "GroupId": {
+                                "Ref": "SECG0"
+                                },
+                              "IpProtocol": "-1"
+                        }
+            },
+        "SGBaseIngress4SECG1": {
+               "Type": "AWS::EC2::SecurityGroupIngress",
+                    "Properties": {
+                            "CidrIp" : "10.255.0.0/16",
+                                "GroupId": {
+                                    "Ref": "SECG1"
+                                    },
+                                  "IpProtocol": "-1"
+                            }
+                },
+        "vSRX1": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+              "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxbyol"]},
+                "KeyName": {"Ref": "keypair"},
+                "AvailabilityZone" : {
+                  "Fn::Select" : [
+                    "0",
+                    {
+                      "Fn::GetAZs" : ""
+                    }
+                  ]
+                },
+                "InstanceType": "c5.2xlarge",
+                "NetworkInterfaces":
+                  [{
+                  "AssociatePublicIpAddress" : "true",
+                  "DeviceIndex" : "0",
+                  "PrivateIpAddress" : "10.255.0.11",
+                  "GroupSet" : [
+                    {
+                      "Ref":"SECG0"
+                    }
+                  ],
+                  "SubnetId": {
+                    "Ref": "Subnet0"
+                  }
+                }],
+                "UserData": {
+                      "Fn::Base64": {
+                      "Fn::Join": [
+                      "\n",
+                      [
+                          "#junos-config",
+                          "groups {",
+                          "    aws-default {",
+                          "        system {",
+                          "            name-server {",
+                          "                8.8.8.8;",
+                          "            }",
+                          "            services {",
+                          "                ssh {",
+                          "                    no-passwords;",
+                          "                }",
+                          "                netconf {",
+                          "                    ssh;",
+                          "                }",
+                          "                web-management {",
+                          "                    https {",
+                          "                        system-generated-certificate;",
+                          "                    }",
+                          "                }",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "}",
+                          "apply-groups aws-default;",
+                          "system {",
+                          "    host-name vSRX1;",
+                          "    services {",
+                          "        ssh;",
+                          "    }",
+                          "}",
+                          "services {",
+                          "    application-identification {",
+                          "        download {",
+                          "            url https://services.netscreen.com/cgi-bin/index.cgi;",
+                          "            ignore-server-validation;",
+                          "        }",
+                          "    }",
+                          "}",
+                          "security {",
+                          "    log {",
+                          "        mode stream;",
+                          "        format sd-syslog;",
+                          "        report;",
+                          "    }",
+                          "    nat {",
+                          "        source {",
+                          "            rule-set nat-set {",
+                          "                from interface ge-0/0/1.0;",
+                          "                to interface ge-0/0/0.0;",
+                          "                rule nat-rule {",
+                          "                    match {",
+                          "                        source-address 0.0.0.0/0;",
+                          "                        destination-address 0.0.0.0/0;",
+                          "                    }",
+                          "                    then {",
+                          "                        source-nat {",
+                          "                            interface;",
+                          "                        }",
+                          "                    }",
+                          "                }",
+                          "            }",
+                          "        }",
+                          "        destination {",
+                          "            pool deb_ssh {",
+                          "                address 10.255.3.10/32 port 22;",
+                          "            }",
+                          "            rule-set rule_set_ssh {",
+                          "                from zone untrust;",
+                          "                rule ssh_rule {",
+                          "                    match {",
+                          "                        source-address 0.0.0.0/0;",
+                          "                        destination-address 10.255.1.11/32;",
+                          "                        destination-port {",
+                          "                            2322;",
+                          "                        }",
+                          "                    }",
+                          "                    then {",
+                          "                        destination-nat {",
+                          "                            pool {",
+                          "                                deb_ssh;",
+                          "                            }",
+                          "                        }",
+                          "                    }",
+                          "                }",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "    policies {",
+                          "        from-zone trust to-zone untrust {",
+                          "            policy allow-all-out {",
+                          "                match {",
+                          "                    source-address any;",
+                          "                    destination-address any;",
+                          "                    application any;",
+                          "                }",
+                          "                then {",
+                          "                    permit;",
+                          "                    count;",
+                          "                }",
+                          "            }",
+                          "        }",
+                          "        from-zone untrust to-zone trust {",
+                          "            policy forwardssh {",
+                          "                match {",
+                          "                    source-address any;",
+                          "                    destination-address deb;",
+                          "                    application junos-ssh;",
+                          "                }",
+                          "                then {",
+                          "                    permit;",
+                          "                    count;",
+                          "                }",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "    zones {",
+                          "        security-zone untrust {",
+                          "            address-book {",
+                          "                address deb2 10.255.2.87/32;",
+                          "            }",
+                          "            host-inbound-traffic {",
+                          "                system-services {",
+                          "                    ping;",
+                          "                    https;",
+                          "                    ssh;",
+                          "                }",
+                          "            }",
+                          "            interfaces {",
+                          "                ge-0/0/0.0;",
+                          "            }",
+                          "        }",
+                          "        security-zone trust {",
+                          "            address-book {",
+                          "                address deb 10.255.3.10/32;",
+                          "            }",
+                          "            host-inbound-traffic {",
+                          "                system-services {",
+                          "                    all;",
+                          "                }",
+                          "            }",
+                          "            interfaces {",
+                          "                ge-0/0/1.0;",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "}",
+                          "interfaces {",
+                          "    ge-0/0/0 {",
+                          "        mtu 9192;",
+                          "        unit 0 {",
+                          "            family inet {",
+                          "                address 10.255.1.11/24;",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "    ge-0/0/1 {",
+                          "        mtu 9192;",
+                          "        unit 0 {",
+                          "            family inet {",
+                          "                address 10.255.3.11/24;",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "    fxp0 {",
+                          "        mtu 9192;",
+                          "        unit 0 {",
+                          "            family inet {",
+                          "                address 10.255.0.11/24;",
+                          "            }",
+                          "        }",
+                          "    }",
+                          "}",
+                          "routing-instances {",
+                          "    aws {",
+                          "        routing-options {",
+                          "            static {",
+                          "                route 0.0.0.0/0 next-hop 10.255.1.1;",
+                          "            }",
+                          "        }",
+                          "        interface ge-0/0/0.0;",
+                          "        interface ge-0/0/1.0;",
+                          "        instance-type virtual-router;",
+                          "    }",
+                          "}",
+                          "applications {",
+                          "    application 2322 {",
+                          "        protocol tcp;",
+                          "        destination-port 2322;",
+                          "    }",
+                          "}",
+                          "routing-options {",
+                          "    static {",
+                          "        route 0.0.0.0/0 next-hop 10.255.0.1;",
+                          "    }",
+                          "}"
+                  ]
+                ]
+              }
+                },
+                "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "vSRX1" ] ] } }]
+              },
+              "DependsOn" : "IGW"
+        },
+        "Deb1": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+              "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "deb11"]},
+              "AvailabilityZone" : {
+                "Fn::Select" : [
+                  "0",
+                  {
+                    "Fn::GetAZs" : ""
+                  }
+                ]
+              },
+                "KeyName": {"Ref": "keypair"},
+                "InstanceType": "t3.small",
+                "NetworkInterfaces": [
+                {
+                    "NetworkInterfaceId": {
+                        "Ref": "Deb1Eth0"
+                      },
+                    "DeviceIndex": "0"
+                      }
+                ],
+                "UserData" : {
+                    "Fn::Base64" : {
+                          "Fn::Join" : [ "", [
+                                             "#!/bin/bash -xe\n",
+                                             "\n",
+                                             "sudo route del default\n",
+                                             "sudo route add default gw 10.255.3.11\n"
+                                            ]
+                          ]
+                      }
+                },
+
+                "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "Deb1" ] ] } }]
+
+            }
+        },
+        "vSRX1EIP1": {
+          "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Domain" : "VPCDev",
+                "Tags" : [
+                  {"Key" : "Name", "Value" : "vSRX1-PubIP"},
+                  {"Key" : "EIPaddress", "Value" : "vSRX1"}
+                ]
+              },
+              "DependsOn" : [ "vSRX1" ]
+        },
+        "EIPAttach1":{
+            "Type" : "AWS::EC2::EIPAssociation",
+               "Properties" : {
+                    "AllocationId" : {
+                        "Fn::GetAtt": ["vSRX1EIP1", "AllocationId"]
+                          },
+                    "NetworkInterfaceId" : {"Ref" : "vSRX1Eth1"}
+                }
+              },
+        "IGW": {
+          "Type" : "AWS::EC2::InternetGateway"
+        },
+        "IGWAttach":{
+          "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+              "InternetGatewayId" : {"Ref":"IGW"},
+              "VpcId" : {"Ref":"VPCDev"}
+          }
+        },
+        "RTblSN0": {
+          "Type" : "AWS::EC2::RouteTable",
+          "Properties" : {
+            "VpcId": {
+                "Ref": "VPCDev"
+            }
+            }
+        },
+        "RTblSN1": {
+          "Type" : "AWS::EC2::RouteTable",
+          "Properties" : {
+            "VpcId": {
+                "Ref": "VPCDev"
+            }
+            }
+        },
+        "RTblSN3": {
+          "Type" : "AWS::EC2::RouteTable",
+          "Properties" : {
+            "VpcId": {
+                "Ref": "VPCDev"
+            }
+            }
+        },
+        "RouteS0" : {
+           "Type" : "AWS::EC2::Route",
+           "DependsOn" : "IGW",
+           "Properties" : {
+              "RouteTableId" : { "Ref" : "RTblSN0" },
+              "DestinationCidrBlock" : "0.0.0.0/0",
+              "GatewayId" : { "Ref" : "IGW" }
+           }
+        },
+        "RouteS1" : {
+           "Type" : "AWS::EC2::Route",
+           "DependsOn" : "IGW",
+           "Properties" : {
+             "RouteTableId" : { "Ref" : "RTblSN1" },
+             "DestinationCidrBlock" : "0.0.0.0/0",
+             "GatewayId" : { "Ref" : "IGW" }
+           }
+        },
+        "SubnetAssRoute0" : {
+          "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties" : {
+              "RouteTableId" : {"Ref" : "RTblSN0"},
+              "SubnetId" : {"Ref" : "Subnet0"}
+            }
+        },
+        "SubnetAssRoute1" : {
+          "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties" : {
+              "RouteTableId" : {"Ref" : "RTblSN1"},
+              "SubnetId" : {"Ref" : "Subnet1"}
+            }
+        },
+        "SubnetAssRoute3" : {
+          "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties" : {
+              "RouteTableId" : {"Ref" : "RTblSN3"},
+              "SubnetId" : {"Ref" : "Subnet3"}
+            }
+        },
+        "ENI1vSRX1": {
+          "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties" : {
+              "DeviceIndex" : "1",
+              "InstanceId" :  {"Ref" : "vSRX1"},
+              "NetworkInterfaceId" :  {"Ref" : "vSRX1Eth1"}
+          }
+        },
+        "ENI3vSRX1": {
+          "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties" : {
+              "DeviceIndex" : "2",
+              "InstanceId" :  {"Ref" : "vSRX1"},
+              "NetworkInterfaceId" :  {"Ref" : "vSRX1Eth3"}
+          }
+        }
+    },
+    "Outputs" : {
+        "vSRX1Eth1" :{
+          "Value": {"Ref" : "vSRX1Eth1"}
+        },
+        "Deb1Eth0" :{
+          "Value": {"Ref" : "Deb1Eth0"}
+        }
+    }
+}
