@@ -1,0 +1,867 @@
+headend
+
+ec2-user@vSRX2# show | display set     
+set version 20.4R3.8
+set groups aws-default system root-authentication encrypted-password *disabled*
+set groups aws-default system scripts translation max-datasize 512m
+set groups aws-default system login user ec2-user full-name juniper-aws-ec2-user
+set groups aws-default system login user ec2-user uid 100
+set groups aws-default system login user ec2-user class super-user
+set groups aws-default system login user ec2-user authentication ssh-rsa "ssh-rsa stuff"
+set groups aws-default system services ssh no-passwords
+set groups aws-default system services netconf ssh
+set groups aws-default system services web-management https system-generated-certificate
+set groups aws-default system license autoupdate url https://ae1.juniper.net/junos/key_retrieval
+set apply-groups aws-default
+set system host-name vSRX2
+set system services ssh
+set system syslog file kmd-logs daemon info
+set system syslog file kmd-logs match KMD
+set services application-identification download url https://services.netscreen.com/cgi-bin/index.cgi
+set services application-identification download ignore-server-validation
+set security log mode stream
+set security log format sd-syslog
+set security log report
+set security ike proposal ike-proposal authentication-method pre-shared-keys
+set security ike proposal ike-proposal dh-group group2
+set security ike proposal ike-proposal authentication-algorithm sha-256
+set security ike proposal ike-proposal encryption-algorithm aes-256-cbc
+set security ike proposal ike-proposal lifetime-seconds 1800
+set security ike policy ike-policy proposals ike-proposal
+set security ike policy ike-policy pre-shared-key ascii-text "stuff"
+set security ike gateway remoteend ike-policy ike-policy
+set security ike gateway remoteend address 54.193.84.97
+set security ike gateway remoteend local-identity key-id 12345
+set security ike gateway remoteend remote-identity key-id 54321
+set security ike gateway remoteend external-interface ge-0/0/1.0
+set security ipsec policy ipsec-policy perfect-forward-secrecy keys group2
+set security ipsec vpn site-2-site bind-interface st0.0
+set security ipsec vpn site-2-site ike gateway remoteend
+set security ipsec vpn site-2-site ike ipsec-policy ipsec-policy
+set security ipsec vpn site-2-site establish-tunnels immediately
+set security nat source rule-set rule-set-1 from interface ge-0/0/0.0
+set security nat source rule-set rule-set-1 to interface ge-0/0/1.0
+set security nat source rule-set rule-set-1 rule rule-1 match source-address 0.0.0.0/0
+set security nat source rule-set rule-set-1 rule rule-1 match destination-address 0.0.0.0/0
+set security nat source rule-set rule-set-1 rule rule-1 then source-nat interface
+set security nat source rule-set rule-set-2 from interface ge-0/0/1.0
+set security nat source rule-set rule-set-2 to interface ge-0/0/0.0
+set security nat source rule-set rule-set-2 rule rule-2 match source-address 0.0.0.0/0
+set security nat source rule-set rule-set-2 rule rule-2 match destination-address 0.0.0.0/0
+set security nat source rule-set rule-set-2 rule rule-2 match destination-port 22
+set security nat source rule-set rule-set-2 rule rule-2 match destination-port 80
+set security nat source rule-set rule-set-2 rule rule-2 then source-nat interface
+set security nat destination pool sshpool routing-instance aws
+set security nat destination pool sshpool address 10.1.0.10/32
+set security nat destination pool sshpool address port 22
+set security nat destination pool httppool routing-instance aws
+set security nat destination pool httppool address 10.1.0.10/32
+set security nat destination pool httppool address port 80
+set security nat destination rule-set rule-set-1 from interface ge-0/0/1.0
+set security nat destination rule-set rule-set-1 rule rule-1 match destination-address 0.0.0.0/0
+set security nat destination rule-set rule-set-1 rule rule-1 match destination-port 22
+set security nat destination rule-set rule-set-1 rule rule-1 then destination-nat pool sshpool
+set security nat destination rule-set rule-set-1 rule rule-2 match destination-address 0.0.0.0/0
+set security nat destination rule-set rule-set-1 rule rule-2 match destination-port 80
+set security nat destination rule-set rule-set-1 rule rule-2 then destination-nat pool httppool
+set security policies from-zone trust to-zone untrust policy allow-all-out match source-address any
+set security policies from-zone trust to-zone untrust policy allow-all-out match destination-address any
+set security policies from-zone trust to-zone untrust policy allow-all-out match application any
+set security policies from-zone trust to-zone untrust policy allow-all-out then permit
+set security policies from-zone trust to-zone untrust policy allow-all-out then count
+set security policies from-zone untrust to-zone trust policy fwrd match source-address any
+set security policies from-zone untrust to-zone trust policy fwrd match destination-address any
+set security policies from-zone untrust to-zone trust policy fwrd match application any
+set security policies from-zone untrust to-zone trust policy fwrd then permit
+set security policies from-zone untrust to-zone trust policy fwrd then count
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic match source-address address-ranges
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic match destination-address address-ranges
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic match application any
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic then permit
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic then count
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic match source-address address-ranges
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic match destination-address remote
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic match application any
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic then permit
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic then count
+set security zones security-zone untrust host-inbound-traffic system-services dhcp
+set security zones security-zone untrust host-inbound-traffic system-services ping
+set security zones security-zone untrust host-inbound-traffic system-services ike
+set security zones security-zone untrust host-inbound-traffic system-services all
+set security zones security-zone untrust host-inbound-traffic protocols all
+set security zones security-zone untrust interfaces ge-0/0/1.0
+set security zones security-zone trust address-book address address-ranges 10.0.0.0/8
+set security zones security-zone trust address-book address remote 10.0.0.0/8
+set security zones security-zone trust host-inbound-traffic system-services all
+set security zones security-zone trust host-inbound-traffic system-services ping
+set security zones security-zone trust interfaces ge-0/0/0.0
+set security zones security-zone vpn-zone address-book address address-ranges 10.0.0.0/8
+set security zones security-zone vpn-zone address-book address remote 10.0.0.0/8
+set security zones security-zone vpn-zone host-inbound-traffic system-services ike
+set security zones security-zone vpn-zone host-inbound-traffic system-services all
+set security zones security-zone vpn-zone host-inbound-traffic protocols all
+set security zones security-zone vpn-zone interfaces st0.0
+set interfaces ge-0/0/0 mtu 9192
+set interfaces ge-0/0/0 unit 0 family inet dhcp
+set interfaces ge-0/0/1 mtu 9192
+set interfaces ge-0/0/1 unit 0 family inet dhcp
+set interfaces fxp0 mtu 9192
+set interfaces fxp0 unit 0 family inet dhcp
+set interfaces st0 unit 0 family inet address 10.10.0.11/24
+set routing-instances aws routing-options static route 0.0.0.0/0 next-hop 10.0.6.1
+set routing-instances aws routing-options static route 10.1.0.0/16 next-hop 10.0.4.1
+set routing-instances aws routing-options static route 10.255.0.0/16 next-hop st0.0
+set routing-instances aws interface ge-0/0/0.0
+set routing-instances aws interface ge-0/0/1.0
+set routing-instances aws interface st0.0
+set routing-instances aws instance-type virtual-router
+set routing-options static route 0.0.0.0/0 next-hop 10.0.2.1
+
+
+#load_balancer=true#junos-config        
+system {
+    host-name vSRX2;
+    services {
+        ssh;
+    }
+    syslog {
+        file kmd-logs {
+            daemon info;
+            match KMD;
+        }
+    }                                   
+}
+services {
+    application-identification {
+        ##
+        ## Warning: requires 'appid-sig' license
+        ##
+        download {
+            url https://services.netscreen.com/cgi-bin/index.cgi;
+            ignore-server-validation;
+        }
+    }
+}
+security {
+    log {
+        mode stream;
+        format sd-syslog;
+        report;
+    }
+    ike {
+        proposal ike-proposal {
+            authentication-method pre-shared-keys;
+            dh-group group2;
+            authentication-algorithm sha-256;
+            encryption-algorithm aes-256-cbc;
+            lifetime-seconds 1800;
+        }
+        policy ike-policy {
+            proposals ike-proposal;
+            pre-shared-key ascii-text "stuff"; ## SECRET-DATA
+        }                               
+        gateway remoteend {
+            ike-policy ike-policy;
+            address 54.193.84.97;
+            local-identity key-id 12345;
+            remote-identity key-id 54321;
+            external-interface ge-0/0/1.0;
+        }
+    }
+    ipsec {
+        policy ipsec-policy {
+            perfect-forward-secrecy {
+                keys group2;
+            }
+        }
+        vpn site-2-site {
+            bind-interface st0.0;
+            ike {
+                gateway remoteend;
+                ipsec-policy ipsec-policy;
+            }
+            establish-tunnels immediately;
+        }
+    }
+    nat {
+        source {
+            rule-set rule-set-1 {
+                from interface ge-0/0/0.0;
+                to interface ge-0/0/1.0;
+                rule rule-1 {
+                    match {             
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                    }
+                    then {
+                        source-nat {
+                            interface;
+                        }
+                    }
+                }
+            }
+            rule-set rule-set-2 {
+                from interface ge-0/0/1.0;
+                to interface ge-0/0/0.0;
+                rule rule-2 {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            22;
+                            80;
+                        }
+                    }
+                    then {
+                        source-nat {
+                            interface;
+                        }
+                    }
+                }
+            }
+        }                               
+        destination {
+            pool sshpool {
+                routing-instance {
+                    aws;
+                }
+                address 10.1.0.10/32 port 22;
+            }
+            pool httppool {
+                routing-instance {
+                    aws;
+                }
+                address 10.1.0.10/32 port 80;
+            }
+            rule-set rule-set-1 {
+                from interface ge-0/0/1.0;
+                rule rule-1 {
+                    match {
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            22;
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                sshpool;
+                            }
+                        }
+                    }
+                }                       
+                rule rule-2 {
+                    match {
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            80;
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                httppool;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone untrust {
+            policy allow-all-out {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }                       
+            }
+        }
+        from-zone untrust to-zone trust {
+            policy fwrd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone vpn-zone to-zone trust {
+            policy vpn-traffic {
+                match {
+                    source-address address-ranges;
+                    destination-address address-ranges;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust to-zone vpn-zone {
+            policy vpn-traffic {        
+                match {
+                    source-address address-ranges;
+                    destination-address remote;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone untrust {
+            host-inbound-traffic {
+                system-services {
+                    dhcp;
+                    ping;
+                    ike;
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                ge-0/0/1.0;
+            }
+        }
+        security-zone trust {           
+            address-book {
+                address address-ranges 10.0.0.0/8;
+                address remote 10.0.0.0/8;
+            }
+            host-inbound-traffic {
+                system-services {
+                    all;
+                    ping;
+                }
+            }
+            interfaces {
+                ge-0/0/0.0;
+            }
+        }
+        security-zone vpn-zone {
+            address-book {
+                address address-ranges 10.0.0.0/8;
+                address remote 10.0.0.0/8;
+            }
+            host-inbound-traffic {
+                system-services {
+                    ike;
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                st0.0;                  
+            }
+        }
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    ge-0/0/1 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    fxp0 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    st0 {                               
+        unit 0 {
+            family inet {
+                address 10.10.0.11/24;
+            }
+        }
+    }
+}
+routing-instances {
+    aws {
+        routing-options {
+            static {
+                route 0.0.0.0/0 next-hop 10.0.6.1;
+                route 10.1.0.0/16 next-hop 10.0.4.1;
+                route 10.255.0.0/16 next-hop st0.0;
+            }
+        }
+        interface ge-0/0/0.0;
+        interface ge-0/0/1.0;
+        interface st0.0;
+        instance-type virtual-router;
+    }
+}
+routing-options {
+    static {
+        route 0.0.0.0/0 next-hop 10.0.2.1;
+    }
+}
+
+
+
+
+
+remote
+
+set version 20.4R3.8
+set groups aws-default system root-authentication encrypted-password *disabled*
+set groups aws-default system scripts translation max-datasize 512m
+set groups aws-default system login user ec2-user full-name juniper-aws-ec2-user
+set groups aws-default system login user ec2-user uid 100
+set groups aws-default system login user ec2-user class super-user
+set groups aws-default system login user ec2-user authentication ssh-rsa "ssh-rsa stuff"
+set groups aws-default system services ssh no-passwords
+set groups aws-default system services netconf ssh
+set groups aws-default system services web-management https system-generated-certificate
+set groups aws-default system name-server 8.8.8.8
+set groups aws-default system license autoupdate url https://ae1.juniper.net/junos/key_retrieval
+set apply-groups aws-default
+set system host-name vSRX1
+set system root-authentication encrypted-password "stuff."
+set system services ssh
+set system syslog file kmd-logs daemon info
+set system syslog file kmd-logs match KMD
+set services application-identification download url https://services.netscreen.com/cgi-bin/index.cgi
+set services application-identification download ignore-server-validation
+set security log mode stream
+set security log format sd-syslog
+set security log report
+set security ike proposal ike-proposal authentication-method pre-shared-keys
+set security ike proposal ike-proposal dh-group group2
+set security ike proposal ike-proposal authentication-algorithm sha-256
+set security ike proposal ike-proposal encryption-algorithm aes-256-cbc
+set security ike proposal ike-proposal lifetime-seconds 1800
+set security ike policy ike-policy proposals ike-proposal
+set security ike policy ike-policy pre-shared-key ascii-text "$stufff"
+set security ike gateway headend ike-policy ike-policy
+set security ike gateway headend address 35.80.142.39
+set security ike gateway headend local-identity key-id 54321
+set security ike gateway headend remote-identity key-id 12345
+set security ike gateway headend external-interface ge-0/0/0.0
+set security ipsec policy ipsec-policy perfect-forward-secrecy keys group2
+set security ipsec vpn site-2-site bind-interface st0.0
+set security ipsec vpn site-2-site ike gateway headend
+set security ipsec vpn site-2-site ike ipsec-policy ipsec-policy
+set security ipsec vpn site-2-site establish-tunnels immediately
+set security nat source rule-set nat-set from interface ge-0/0/1.0
+set security nat source rule-set nat-set to interface ge-0/0/0.0
+set security nat source rule-set nat-set rule nat-rule match source-address 0.0.0.0/0
+set security nat source rule-set nat-set rule nat-rule match destination-address 0.0.0.0/0
+set security nat source rule-set nat-set rule nat-rule then source-nat interface
+set security nat destination pool deb_ssh address 10.255.3.10/32
+set security nat destination pool deb_ssh address port 22
+set security nat destination rule-set rule_set_ssh from zone untrust
+set security nat destination rule-set rule_set_ssh rule ssh_rule match source-address 0.0.0.0/0
+set security nat destination rule-set rule_set_ssh rule ssh_rule match destination-address 10.255.1.11/32
+set security nat destination rule-set rule_set_ssh rule ssh_rule match destination-port 2322
+set security nat destination rule-set rule_set_ssh rule ssh_rule then destination-nat pool deb_ssh
+set security policies from-zone trust to-zone untrust policy allow-all-out match source-address any
+set security policies from-zone trust to-zone untrust policy allow-all-out match destination-address any
+set security policies from-zone trust to-zone untrust policy allow-all-out match application any
+set security policies from-zone trust to-zone untrust policy allow-all-out then permit
+set security policies from-zone trust to-zone untrust policy allow-all-out then count
+set security policies from-zone untrust to-zone trust policy forwardssh match source-address any
+set security policies from-zone untrust to-zone trust policy forwardssh match destination-address deb
+set security policies from-zone untrust to-zone trust policy forwardssh match application junos-ssh
+set security policies from-zone untrust to-zone trust policy forwardssh then permit
+set security policies from-zone untrust to-zone trust policy forwardssh then count
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic match source-address remote
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic match destination-address address-ranges
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic match application any
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic then permit
+set security policies from-zone vpn-zone to-zone trust policy vpn-traffic then count
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic match source-address address-ranges
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic match destination-address remote
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic match application any
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic then permit
+set security policies from-zone trust to-zone vpn-zone policy vpn-traffic then count
+set security zones security-zone untrust address-book address deb2 10.255.2.87/32
+set security zones security-zone untrust host-inbound-traffic system-services all
+set security zones security-zone untrust host-inbound-traffic protocols all
+set security zones security-zone untrust interfaces ge-0/0/0.0
+set security zones security-zone trust address-book address deb 10.255.3.10/32
+set security zones security-zone trust address-book address address-ranges 10.0.0.0/8
+set security zones security-zone trust address-book address remote 10.0.0.0/8
+set security zones security-zone trust host-inbound-traffic system-services all
+set security zones security-zone trust host-inbound-traffic system-services ping
+set security zones security-zone trust interfaces ge-0/0/1.0
+set security zones security-zone vpn-zone address-book address remote 10.0.0.0/8
+set security zones security-zone vpn-zone address-book address address-ranges 10.0.0.0/8
+set security zones security-zone vpn-zone host-inbound-traffic system-services ike
+set security zones security-zone vpn-zone host-inbound-traffic system-services all
+set security zones security-zone vpn-zone host-inbound-traffic protocols all
+set security zones security-zone vpn-zone interfaces st0.0
+set interfaces ge-0/0/0 mtu 9192
+set interfaces ge-0/0/0 unit 0 family inet address 10.255.1.11/24
+set interfaces ge-0/0/1 mtu 9192
+set interfaces ge-0/0/1 unit 0 family inet address 10.255.3.11/24
+set interfaces fxp0 mtu 9192
+set interfaces fxp0 unit 0 family inet address 10.255.0.11/24
+set interfaces st0 unit 0 family inet address 192.168.0.1/32
+set routing-instances aws routing-options static route 0.0.0.0/0 next-hop 10.255.1.1
+set routing-instances aws routing-options static route 10.0.0.0/8 next-hop st0.0
+set routing-instances aws routing-options static route 10.1.0.0/16 next-hop st0.0
+set routing-instances aws routing-options static route 10.0.0.0/16 next-hop st0.0
+set routing-instances aws interface ge-0/0/0.0
+set routing-instances aws interface ge-0/0/1.0
+set routing-instances aws interface st0.0
+set routing-instances aws instance-type virtual-router
+set applications application 2322 protocol tcp
+set applications application 2322 destination-port 2322
+set routing-options static route 0.0.0.0/0 next-hop 10.255.0.1
+
+#junos-config
+groups {
+    aws-default {
+        system {
+            root-authentication {
+                encrypted-password *disabled*; ## SECRET-DATA
+            }
+            scripts {
+                translation {
+                    max-datasize 512m;
+                }
+            }
+            login {
+                user ec2-user {
+                    full-name juniper-aws-ec2-user;
+                    uid 100;
+                    class super-user;
+                    authentication {
+                        ssh-rsa "ssh-rsa stuff"; ## SECRET-DATA
+                    }
+                }
+            }
+            services {
+                ssh {
+                    no-passwords;       
+                }
+                netconf {
+                    ssh;
+                }
+                web-management {
+                    https {
+                        system-generated-certificate;
+                    }
+                }
+            }
+            name-server {
+                8.8.8.8;
+            }
+            license {
+                autoupdate {
+                    url https://ae1.juniper.net/junos/key_retrieval;
+                }
+            }
+        }
+    }
+}
+apply-groups aws-default;
+system {
+    host-name vSRX1;
+    root-authentication {
+        encrypted-password "stuff."; ## SECRET-DATA
+    }
+    services {
+        ssh;                            
+    }
+    syslog {
+        file kmd-logs {
+            daemon info;
+            match KMD;
+        }
+    }
+}
+services {
+    application-identification {
+        ##
+        ## Warning: requires 'appid-sig' license
+        ##
+        download {
+            url https://services.netscreen.com/cgi-bin/index.cgi;
+            ignore-server-validation;
+        }
+    }
+}
+security {
+    log {
+        mode stream;
+        format sd-syslog;
+        report;
+    }
+    ike {
+        proposal ike-proposal {
+            authentication-method pre-shared-keys;
+            dh-group group2;
+            authentication-algorithm sha-256;
+            encryption-algorithm aes-256-cbc;
+            lifetime-seconds 1800;
+        }
+        policy ike-policy {
+            proposals ike-proposal;
+            pre-shared-key ascii-text "stuff"; ## SECRET-DATA
+        }
+        gateway headend {
+            ike-policy ike-policy;
+            address 35.80.142.39;
+            local-identity key-id 54321;
+            remote-identity key-id 12345;
+            external-interface ge-0/0/0.0;
+        }
+    }
+    ipsec {
+        policy ipsec-policy {
+            perfect-forward-secrecy {
+                keys group2;
+            }
+        }
+        vpn site-2-site {
+            bind-interface st0.0;
+            ike {
+                gateway headend;
+                ipsec-policy ipsec-policy;
+            }
+            establish-tunnels immediately;
+        }
+    }                                   
+    nat {
+        source {
+            rule-set nat-set {
+                from interface ge-0/0/1.0;
+                to interface ge-0/0/0.0;
+                rule nat-rule {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                    }
+                    then {
+                        source-nat {
+                            interface;
+                        }
+                    }
+                }
+            }
+        }
+        destination {
+            pool deb_ssh {
+                address 10.255.3.10/32 port 22;
+            }
+            rule-set rule_set_ssh {
+                from zone untrust;
+                rule ssh_rule {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 10.255.1.11/32;
+                        destination-port {
+                            2322;       
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                deb_ssh;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone untrust {
+            policy allow-all-out {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone untrust to-zone trust {
+            policy forwardssh {
+                match {                 
+                    source-address any;
+                    destination-address deb;
+                    application junos-ssh;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone vpn-zone to-zone trust {
+            policy vpn-traffic {
+                match {
+                    source-address remote;
+                    destination-address address-ranges;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust to-zone vpn-zone {
+            policy vpn-traffic {
+                match {
+                    source-address address-ranges;
+                    destination-address remote;
+                    application any;
+                }                       
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone untrust {
+            address-book {
+                address deb2 10.255.2.87/32;
+            }
+            host-inbound-traffic {
+                system-services {
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                ge-0/0/0.0;
+            }
+        }
+        security-zone trust {
+            address-book {
+                address deb 10.255.3.10/32;
+                address address-ranges 10.0.0.0/8;
+                address remote 10.0.0.0/8;
+            }                           
+            host-inbound-traffic {
+                system-services {
+                    all;
+                    ping;
+                }
+            }
+            interfaces {
+                ge-0/0/1.0;
+            }
+        }
+        security-zone vpn-zone {
+            address-book {
+                address remote 10.0.0.0/8;
+                address address-ranges 10.0.0.0/8;
+            }
+            host-inbound-traffic {
+                system-services {
+                    ike;
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                st0.0;
+            }
+        }
+    }
+}                                       
+interfaces {
+    ge-0/0/0 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                address 10.255.1.11/24;
+            }
+        }
+    }
+    ge-0/0/1 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                address 10.255.3.11/24;
+            }
+        }
+    }
+    fxp0 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                address 10.255.0.11/24;
+            }
+        }
+    }
+    st0 {
+        unit 0 {
+            family inet {
+                address 192.168.0.1/32;
+            }                           
+        }
+    }
+}
+routing-instances {
+    aws {
+        routing-options {
+            static {
+                route 0.0.0.0/0 next-hop 10.255.1.1;
+                route 10.0.0.0/8 next-hop st0.0;
+                route 10.1.0.0/16 next-hop st0.0;
+                route 10.0.0.0/16 next-hop st0.0;
+            }
+        }
+        interface ge-0/0/0.0;
+        interface ge-0/0/1.0;
+        interface st0.0;
+        instance-type virtual-router;
+    }
+}
+applications {
+    application 2322 {
+        protocol tcp;
+        destination-port 2322;
+    }
+}
+routing-options {
+    static {
+        route 0.0.0.0/0 next-hop 10.255.0.1;
+    }
+}  
