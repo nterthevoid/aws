@@ -1,4 +1,3 @@
-# Greenfield net new ...
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
   "Description" : "Basic AWS AMi deploy",
@@ -143,6 +142,7 @@
     "awsami1" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
+          "KeyName": {"Ref": "keypair"},
             "ImageId" : {"Ref" : "LatestAmiId"},
             "NetworkInterfaces": [ {
               "AssociatePublicIpAddress": "true",
@@ -166,9 +166,7 @@
                       "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
                       "echo \"<?php echo '<h2>Welcome </h2>'; ?>\" > /var/www/html/phpinfo.php\n",
                       "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
-                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
-
-                      
+                      "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n"
                                       ]
                     ]
                 }
@@ -179,16 +177,16 @@
   },
   "Outputs" : {
     "SG1" :{
-      "Value": {"Ref" : "SG1"},
+      "Value": {"Ref" : "SG1"}
     },
     "Subnet1" :{
-      "Value": {"Ref" : "Subnet1"},
+      "Value": {"Ref" : "Subnet1"}
     },
     "vpc1" :{
-      "Value": {"Ref" : "vpc1"},
+      "Value": {"Ref" : "vpc1"}
     },
     "LatestAmiId" :{
-      "Value": {"Ref" : "LatestAmiId"},
+      "Value": {"Ref" : "LatestAmiId"}
     },
     "awsami1" :{
       "Value": {"Ref" : "awsami1"}
