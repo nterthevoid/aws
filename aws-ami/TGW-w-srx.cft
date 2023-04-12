@@ -838,13 +838,22 @@
     "EIP1" : {
       "Type" : "AWS::EC2::EIP",
       "Properties" : {
-          "Domain" : "VPCInspect"
+          "Domain" : "VPCInspect", 
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-vSRX1-fxp0" ] ] } }]
         }
     },
     "EIP2" : {
       "Type" : "AWS::EC2::EIP",
       "Properties" : {
-          "Domain" : "VPCInspect"
+          "Domain" : "VPCInspect", 
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-vSRX1-Ge-0/0/1.0-untrust" ] ] } }]
+        }
+    },
+    "EIP3" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+          "Domain" : "VPC3", 
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-VPC3-AMI" ] ] } }]
         }
     },
     "AssocEIP1" : {
@@ -854,7 +863,29 @@
           "Fn::GetAtt" : [ "EIP1", "AllocationId" ]
       },
       "NetworkInterfaceId" : {
+            "Fn::GetAtt" : [ "vsrx1int0", "Id" ]
+          }
+         }
+    },
+    "AssocEIP2" : {
+      "Type" : "AWS::EC2::EIPAssociation",
+      "Properties" : {
+      "AllocationId" : { 
+          "Fn::GetAtt" : [ "EIP2", "AllocationId" ]
+      },
+      "NetworkInterfaceId" : {
             "Fn::GetAtt" : [ "vsrx1int2", "Id" ]
+          }
+         }
+    },
+    "AssocEIP3" : {
+      "Type" : "AWS::EC2::EIPAssociation",
+      "Properties" : {
+      "AllocationId" : { 
+          "Fn::GetAtt" : [ "EIP3", "AllocationId" ]
+      },
+      "InstanceId" : {
+            "Ref" : "awsVPCEastami1"
           }
          }
     },
