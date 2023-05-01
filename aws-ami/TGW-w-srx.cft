@@ -240,6 +240,12 @@
         "Tags" : [{"Key" : "Name", "Value" : "IGW1VPCInspect"}]
       }
     },
+    "IGW1VPCWest" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {
+        "Tags" : [{"Key" : "Name", "Value" : "IGW1VPCWest"}]
+      }
+    },
     "IGW1VPCEast" : {
       "Type" : "AWS::EC2::InternetGateway",
       "Properties" : {
@@ -251,6 +257,13 @@
         "Properties": {
           "InternetGatewayId" : {"Ref":"IGW1VPCInspect"},
           "VpcId" : {"Ref":"VPCInspect"}
+      }
+    },
+    "IGWAttachVPCWest":{
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "InternetGatewayId" : {"Ref":"IGW1VPCWest"},
+          "VpcId" : {"Ref":"VPCWest"}
       }
     },
     "IGWAttachVPCEast":{
@@ -314,51 +327,68 @@
     },     
 
     "RTblVPCInspectpriv1West": {
+      "DependsOn" : [ "TGWWest" ],
       "Type" : "AWS::EC2::RouteTable",
       "Properties" : {
         "VpcId": {
             "Ref": "VPCInspect"
         },
         "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectpriv1West"}]
-      },
-      "DependsOn" : [ "TGWWest" ]
+      }
     },
-    "Route1VPCInspectSubnetpriv1West" : {
+    "Route1VPCInspectSubnetpriv1West1" : {
+      "DependsOn" : [ "TGWWest" ],
       "Type" : "AWS::EC2::Route",
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1West" },
         "DestinationCidrBlock" : "0.0.0.0/0",
         "NetworkInterfaceId" : { "Ref" : "vsrx1int2" }
+      }
     },
-    "DependsOn" : [ "TGWWest" ]
+    "Route1VPCInspectSubnetpriv1West2" : {
+      "DependsOn" : [ "VPCInspectwesttgwatc" ], 
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1West" },
+        "DestinationCidrBlock" : "10.2.0.0/24",
+        "TransitGatewayId" : { "Ref" : "TGWWest" }
+      }
     },
     "SubnetAssignVPCInspectRTblpriv1" : {
+      "DependsOn" : [ "TGWWest" ],
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
           "RouteTableId" : {"Ref" : "RTblVPCInspectpriv1West"},
           "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1West"}
-        },
-        "DependsOn" : [ "TGWWest" ]
+        }
     },     
-
    "RTblVPCInspectpriv1East": {
+      "DependsOn" : [ "TGWEast" ],
       "Type" : "AWS::EC2::RouteTable",
       "Properties" : {
         "VpcId": {
             "Ref": "VPCInspect"
         },
         "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectpriv1East"}]
-      },
-     "DependsOn" : [ "TGWEast" ]
+      }
     },
-    "Route1VPCInspectSubnetpriv1East" : {
+    "Route1VPCInspectSubnetpriv1East1" : {
+      "DependsOn" : [ "TGWEast" ],
       "Type" : "AWS::EC2::Route",
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1East" },
         "DestinationCidrBlock" : "0.0.0.0/0",
         "NetworkInterfaceId" : { "Ref" : "vsrx1int3" }
+    }
     },
-    "DependsOn" : [ "TGWEast" ]
+    "Route1VPCInspectSubnetpriv1East2" : {
+      "DependsOn" : [ "VPCInspectEasttgwatc" ],
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1East" },
+        "DestinationCidrBlock" : "10.3.0.0/24",
+        "TransitGatewayId" : { "Ref" : "TGWEast" }
+      }
     },
     "SubnetAssignVPCEastRTblpriv1" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
@@ -469,7 +499,7 @@
         "NetworkInterfaces" : [ {
             "NetworkInterfaceId" : {"Ref" : "vsrx1int0"}, "DeviceIndex" : "0" }
            ],  
-        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxbyol"]},
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxconsec"]},
           "KeyName": {"Ref": "keypair"},
           "InstanceType": "c5.2xlarge",
           "UserData": {
@@ -504,7 +534,7 @@
               "    nat {",
               "        source {",
               "            rule-set rule-set-1 {",
-              "                from interface ge-0/0/0.0;",
+              "                from interface [ ge-0/0/0.0 ge-0/0/2.0 ];",
               "                to interface ge-0/0/1.0;",
               "                rule rule-1 {",
               "                    match {",
@@ -518,76 +548,93 @@
               "                    }",
               "                }",
               "            }",
-              "            rule-set rule-set-2 {",
+              "            rule-set sshforwardEast {",
               "                from interface ge-0/0/1.0;",
-              "                to interface ge-0/0/0.0;",
-              "                rule rule-2 {",
+              "                to interface ge-0/0/2.0;",
+              "                rule EastForward {",
               "                    match {",
               "                        source-address 0.0.0.0/0;",
               "                        destination-address 0.0.0.0/0;",
               "                        destination-port {",
               "                            22;",
-              "                            80;",
               "                        }",
               "                    }",
               "                    then {",
               "                        source-nat {",
-              "                            interface;  ",
+              "                            interface;",
               "                        }",
               "                    }",
               "                }",
               "            }",
-              "        }",
-              "        destination {",
-              "            pool sshpool {",
-              "                routing-instance {",
-              "                    aws;",
-              "                }",
-              "                address 10.1.0.10/32 port 22;",
-              "            }",
-              "            pool httppool {",
-              "                routing-instance {",
-              "                    aws;",
-              "                }",
-              "                address 10.1.0.10/32 port 80;",
-              "            }",
-              "            rule-set rule-set-1 {",
+              "            rule-set sshforwardWest {",
               "                from interface ge-0/0/1.0;",
-              "                rule rule-1 {           ",
+              "                to interface ge-0/0/0.0;",
+              "                rule WestForward {",
               "                    match {",
+              "                        source-address 0.0.0.0/0;",
               "                        destination-address 0.0.0.0/0;",
               "                        destination-port {",
               "                            22;",
               "                        }",
               "                    }",
               "                    then {",
-              "                        destination-nat {",
-              "                            pool {",
-              "                                sshpool;",
-              "                            }",
-              "                        }",
-              "                    }",
-              "                }",
-              "                rule rule-2 {",
-              "                    match {",
-              "                        destination-address 0.0.0.0/0;",
-              "                        destination-port {",
-              "                            80;",
-              "                        }",
-              "                    }                   ",
-              "                    then {",
-              "                        destination-nat {",
-              "                            pool {",
-              "                                httppool;",
-              "                            }",
+              "                        source-nat {",
+              "                            interface;",
               "                        }",
               "                    }",
               "                }",
               "            }",
               "        }",
+              "        destination {", 
+              "          pool sshWestdest {",
+              "              routing-instance {",
+              "                  aws;", 
+              "              }",
+              "              address 10.2.0.10/32 port 22;",
+              "          }",                  
+              "          pool sshEastdest {",
+              "              routing-instance {",
+              "                  aws;", 
+              "              }",
+              "              address 10.3.0.10/32 port 22;",
+              "          }",
+              "          rule-set sshforwardmap {",
+              "              from interface ge-0/0/1.0;",
+              "              rule sshEastmatchrule {",
+              "                  match {",
+              "                      destination-address 0.0.0.0/0;",
+              "                      destination-port {",
+              "                          2203;",
+              "                      }",
+              "                  }",
+              "                  then {",
+              "                      destination-nat {",
+              "                          pool {",
+              "                              sshEastdest;",
+              "                          }",
+              "                      }",
+              "                  }",
+              "             }",
+              "             rule sshWestmatchrule {",
+              "                 match {",
+              "                     destination-address 0.0.0.0/0;",
+              "                     destination-port {",
+              "                         2202;",
+              "                     }",
+              "                 }",
+              "                 then {",
+              "                     destination-nat {",
+              "                         pool {",
+              "                             sshWestdest;",
+              "                         }",
+              "                     }",
+              "                 }",
+              "             }",
+              "          }",
+              "      }",
               "    }",
               "    policies {",
-              "        from-zone trust to-zone untrust {",
+              "        from-zone trust-West to-zone untrust-North {",
               "            policy allow-all-out {",
               "                match {",
               "                    source-address any;",
@@ -600,7 +647,59 @@
               "                }",
               "            }",
               "        }",
-              "        from-zone untrust to-zone trust {",
+              "        from-zone trust-East to-zone untrust-North {",
+              "            policy allow-all-out {",
+              "                match {",
+              "                    source-address any;",
+              "                    destination-address any;",
+              "                    application any;",
+              "                }",
+              "                then {",
+              "                    permit;             ",
+              "                    count;",
+              "                }",
+              "            }",
+              "        }",
+              "        from-zone untrust-North to-zone trust-West {",
+              "            policy fwrd {",
+              "                match {",
+              "                    source-address any;",
+              "                    destination-address any;",
+              "                    application any;",
+              "                }",
+              "                then {",
+              "                    permit;",
+              "                    count;",
+              "                }",
+              "            }",
+              "        }",
+              "        from-zone untrust-North to-zone trust-East {",
+              "            policy fwrd {",
+              "                match {",
+              "                    source-address any;",
+              "                    destination-address any;",
+              "                    application any;",
+              "                }",
+              "                then {",
+              "                    permit;",
+              "                    count;",
+              "                }",
+              "            }",
+              "        }",
+              "        from-zone trust-West to-zone trust-East {",
+              "            policy fwrd {",
+              "                match {",
+              "                    source-address any;",
+              "                    destination-address any;",
+              "                    application any;",
+              "                }",
+              "                then {",
+              "                    permit;",
+              "                    count;",
+              "                }",
+              "            }",
+              "        }",
+              "        from-zone trust-East to-zone trust-West {",
               "            policy fwrd {",
               "                match {",
               "                    source-address any;",
@@ -615,7 +714,7 @@
               "        }",
               "    }",
               "    zones {",
-              "        security-zone untrust {",
+              "        security-zone untrust-North {",
               "            host-inbound-traffic {      ",
               "                system-services {",
               "                    dhcp;",
@@ -625,7 +724,7 @@
               "                ge-0/0/1.0;",
               "            }",
               "        }",
-              "        security-zone trust {",
+              "        security-zone trust-West {",
               "            host-inbound-traffic {",
               "                system-services {",
               "                    all;",
@@ -635,6 +734,16 @@
               "                ge-0/0/0.0;",
               "            }",
               "        }",
+              "        security-zone trust-East {",
+              "            host-inbound-traffic {",
+              "                system-services {",
+              "                    all;",
+              "                }",
+              "            }",
+              "            interfaces {",
+              "                ge-0/0/2.0;",
+              "            }",
+              "        }",              
               "    }",
               "}",
               "interfaces {                            ",
@@ -654,6 +763,14 @@
               "            }",
               "        }",
               "    }",
+              "    ge-0/0/2 {",
+              "        mtu 9192;",
+              "        unit 0 {",
+              "            family inet {",
+              "                dhcp;",
+              "            }",
+              "        }",
+              "    }",              
               "    fxp0 {",
               "        mtu 9192;",
               "        unit 0 {",
@@ -668,11 +785,13 @@
               "        routing-options {",
               "            static {",
               "                route 0.0.0.0/0 next-hop 10.0.5.1;",
-              "                route 10.1.0.0/16 next-hop 10.0.3.1;",
+              "                route 10.2.0.0/16 next-hop 10.0.3.1;",
+              "                route 10.3.0.0/16 next-hop 10.0.4.1;",
               "            }",
               "        }",
               "        interface ge-0/0/0.0;",
               "        interface ge-0/0/1.0;",
+              "        interface ge-0/0/2.0;",              
               "        instance-type virtual-router;",
               "    }",
               "}",
@@ -700,7 +819,7 @@
               "GroupSet": [{"Ref" : "SG1VCP1"}],
               "SubnetId" : {"Ref" : "SubnetVPCInspectmngt1"}
             } ],
-            "InstanceType" : {"Ref" : "instype"},
+            "InstanceType" : "t3.xlarge",
           "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCInspectami1" ] ] } }]
           }
     },
@@ -750,7 +869,7 @@
     "vsrx1int1" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
-          "Description" : "Junos Ge-0/0/0.0 zone trust",
+          "Description" : "Junos Ge-0/0/0.0 zone trust West",
           "GroupSet": [{"Ref" : "SG1VCP1"}],
           "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1West"},
           "SourceDestCheck" : "false",
@@ -760,7 +879,7 @@
     "vsrx1int2" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
-          "Description" : "Junos Ge-0/0/1.0 zone untrust",
+          "Description" : "Junos Ge-0/0/1.0 zone untrust North",
           "GroupSet": [{"Ref" : "SG1VCP1"}],
           "SubnetId" : {"Ref" : "SubnetVPCInspectpub1"},
           "SourceDestCheck" : "false",
@@ -770,7 +889,7 @@
     "vsrx1int3" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
-          "Description" : "Junos Ge-0/0/2.0 zone untrust",
+          "Description" : "Junos Ge-0/0/2.0 zone trust East",
           "GroupSet": [{"Ref" : "SG1VCP1"}],
           "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1East"},
           "SourceDestCheck" : "false",
@@ -780,7 +899,7 @@
     "awsamiVPCInspectint1" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
-          "Description" : "2nd Interface for dual home",
+          "Description" : "quad-nic-West",
           "GroupSet": [{"Ref" : "SG1VCP1"}],
           "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1West"},
           "SourceDestCheck" : "false"
@@ -789,7 +908,16 @@
     "awsamiVPCInspectint2" : {
       "Type" : "AWS::EC2::NetworkInterface",
       "Properties" : {
-          "Description" : "3rd Interface for dual home",
+          "Description" : "quad-nic-East",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1East"},
+          "SourceDestCheck" : "false"
+        }
+    },
+    "awsamiVPCInspectint3" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "quad-nic-untrust-North",
           "GroupSet": [{"Ref" : "SG1VCP1"}],
           "SubnetId" : {"Ref" : "SubnetVPCInspectpub1"},
           "SourceDestCheck" : "false"
@@ -827,12 +955,20 @@
           "NetworkInterfaceId" :  {"Ref" : "awsamiVPCInspectint1"}
       }
     },
-    "Intawsami2Atach1": {
+    "Intawsami1Atach2": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
           "DeviceIndex" : "2",
           "InstanceId" :  {"Ref" : "awsVPCInspectami1"},
           "NetworkInterfaceId" :  {"Ref" : "awsamiVPCInspectint2"}
+      }
+    }, 
+    "Intawsami1Atach3": {
+      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+        "Properties" : {
+          "DeviceIndex" : "3",
+          "InstanceId" :  {"Ref" : "awsVPCInspectami1"},
+          "NetworkInterfaceId" :  {"Ref" : "awsamiVPCInspectint3"}
       }
     }, 
     "EIP1" : {
@@ -920,13 +1056,35 @@
         "Properties" : {
                         "AutoAcceptSharedAttachments" : "enable",
                         "DefaultRouteTableAssociation" : "disable",
-                        "DefaultRouteTablePropagation" : "disable",
+                        "DefaultRouteTablePropagation" : "enable",
                         "Description" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWVPNtest" ] ] },
                         "DnsSupport" : "enable",
                         "MulticastSupport" : "disable",
                         "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWVPNtest" ] ] } }],
                         "VpnEcmpSupport" : "enable"
                       }
+    },
+    "VPCInspectwesttgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+        "SubnetIds" : [ {"Ref": "SubnetVPCInspectpriv1West"}],
+        "Tags" : [
+          {"Key" : "Name", "Value" : "VPCInspectwesttgwatc"}
+        ],
+        "TransitGatewayId" : {"Ref" : "TGWWest"},
+        "VpcId" : {"Ref" : "VPCInspect"}
+      }
+    },
+    "VPCInspectEasttgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+        "SubnetIds" : [ {"Ref": "SubnetVPCInspectpriv1East"}],
+        "Tags" : [
+          {"Key" : "Name", "Value" : "VPCInspectEasttgwatc"}
+        ],
+        "TransitGatewayId" : {"Ref" : "TGWEast"},
+        "VpcId" : {"Ref" : "VPCInspect"}
+      }
     },
     "VPC2Westtgwatc" : {
       "Type" : "AWS::EC2::TransitGatewayAttachment",
@@ -949,6 +1107,90 @@
         "TransitGatewayId" : {"Ref" : "TGWEast"},
         "VpcId" : {"Ref" : "VPCEast"}
       }
+    },
+    "TGWrtblWest" : {
+      "DependsOn" : [ "VPCInspectwesttgwatc", "VPC2Westtgwatc" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTable",
+      "Properties" : {
+        "Tags" : [
+          {"Key" : "Name", "Value" : "TGWrtblWest"}
+        ],
+          "TransitGatewayId" : {"Ref" : "TGWWest"}
+        }
+    },
+    "TGWWestrtbeassoc1" : {
+      "DependsOn" : [ "TGWrtblWest" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectwesttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWWestrtbeassoc2" : {
+      "DependsOn" : [ "TGWrtblWest" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC2Westtgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWWestrtbprop1" : {
+      "DependsOn" : [ "TGWWestrtbeassoc1", "TGWWestrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectwesttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWWestrtbprop2" : {
+      "DependsOn" : [ "TGWWestrtbeassoc1", "TGWWestrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC2Westtgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWrtblEast" : {
+      "DependsOn" : [ "VPCInspectEasttgwatc", "VPC3Easttgwatc" ],
+      "Type" : "AWS::EC2::TransitGatewayRouteTable",
+      "Properties" : {
+        "Tags" : [
+          {"Key" : "Name", "Value" : "TGWrtblEast"}
+        ],
+          "TransitGatewayId" : {"Ref" : "TGWEast"}
+        }
+    },
+    "TGWEastrtbeassoc1" : {
+      "DependsOn" : [ "TGWrtblEast" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectEasttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWEastrtbeassoc2" : {
+      "DependsOn" : [ "TGWrtblEast" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC3Easttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWEastrtbprop1" : {
+      "DependsOn" : [ "TGWEastrtbeassoc1", "TGWEastrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectEasttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWEastrtbprop2" : {
+      "DependsOn" : [ "TGWEastrtbeassoc1", "TGWEastrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC3Easttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
     }
   },  
   "Outputs" : {
