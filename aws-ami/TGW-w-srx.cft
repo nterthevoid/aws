@@ -240,18 +240,6 @@
         "Tags" : [{"Key" : "Name", "Value" : "IGW1VPCInspect"}]
       }
     },
-    "IGW1VPCWest" : {
-      "Type" : "AWS::EC2::InternetGateway",
-      "Properties" : {
-        "Tags" : [{"Key" : "Name", "Value" : "IGW1VPCWest"}]
-      }
-    },
-    "IGW1VPCEast" : {
-      "Type" : "AWS::EC2::InternetGateway",
-      "Properties" : {
-        "Tags" : [{"Key" : "Name", "Value" : "IGW1VPCEast"}]
-      }
-    },
     "IGWAttachVPCInspect":{
       "Type" : "AWS::EC2::VPCGatewayAttachment",
         "Properties": {
@@ -259,23 +247,6 @@
           "VpcId" : {"Ref":"VPCInspect"}
       }
     },
-    "IGWAttachVPCWest":{
-      "Type" : "AWS::EC2::VPCGatewayAttachment",
-        "Properties": {
-          "InternetGatewayId" : {"Ref":"IGW1VPCWest"},
-          "VpcId" : {"Ref":"VPCWest"}
-      }
-    },
-    "IGWAttachVPCEast":{
-      "Type" : "AWS::EC2::VPCGatewayAttachment",
-        "Properties": {
-          "InternetGatewayId" : {"Ref":"IGW1VPCEast"},
-          "VpcId" : {"Ref":"VPCEast"}
-      }
-    },
-
-
-
     "RTblVPCInspectmngt1": {
       "Type" : "AWS::EC2::RouteTable",
       "Properties" : {
@@ -285,7 +256,6 @@
        "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectmngt1"}]
       }
     },
-
     "Route1VPCInspectSubnetmngt1" : {
       "Type" : "AWS::EC2::Route",
       "Properties" : {
@@ -325,7 +295,6 @@
           "SubnetId" : {"Ref" : "SubnetVPCInspectpub1"}
         }
     },     
-
     "RTblVPCInspectpriv1West": {
       "DependsOn" : [ "TGWWest" ],
       "Type" : "AWS::EC2::RouteTable",
@@ -342,11 +311,11 @@
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1West" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "NetworkInterfaceId" : { "Ref" : "vsrx1int2" }
+        "NetworkInterfaceId" : { "Ref" : "vsrx1int1" }
       }
     },
     "Route1VPCInspectSubnetpriv1West2" : {
-      "DependsOn" : [ "VPCInspectwesttgwatc" ], 
+      "DependsOn" : [ "VPCInspectWesttgwatc" ], 
       "Type" : "AWS::EC2::Route",
       "Properties" : {
         "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1West" },
@@ -397,7 +366,6 @@
           "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1East"}
         }
     },
-
     "RTblVPC2Westpriv1": {
       "Type" : "AWS::EC2::RouteTable",
       "Properties" : {
@@ -477,7 +445,6 @@
       },
       "DependsOn" : [ "VPC3Easttgwatc" ]
     },
-
     "SubnetAssignVPCE3astRTblpriv1" : {
       "Type" : "AWS::EC2::SubnetRouteTableAssociation",
       "Properties" : {
@@ -486,6 +453,7 @@
       }
    },
    "vSRX1": {
+      "DependsOn" : "SG1VCP1",
       "Type": "AWS::EC2::Instance",
       "Properties": {
         "AvailabilityZone" : {
@@ -505,8 +473,8 @@
           "UserData": {
             "Fn::Base64": {
             "Fn::Join": [
-            "\n",
-            [
+               "\n",
+                 [
               "#junos-config        ",
               "system {",
               "    host-name vSRX1;",
@@ -591,6 +559,12 @@
               "                  aws;", 
               "              }",
               "              address 10.2.0.10/32 port 22;",
+              "          }",  
+              "          pool httpWestdest {",
+              "              routing-instance {",
+              "                  aws;", 
+              "              }",
+              "              address 10.2.0.10/32 port 80;",
               "          }",                  
               "          pool sshEastdest {",
               "              routing-instance {",
@@ -598,7 +572,13 @@
               "              }",
               "              address 10.3.0.10/32 port 22;",
               "          }",
-              "          rule-set sshforwardmap {",
+              "          pool httpEastdest {",
+              "              routing-instance {",
+              "                  aws;", 
+              "              }",
+              "              address 10.3.0.10/32 port 80;",
+              "          }",
+              "          rule-set forwardmap {",
               "              from interface ge-0/0/1.0;",
               "              rule sshEastmatchrule {",
               "                  match {",
@@ -626,6 +606,36 @@
               "                     destination-nat {",
               "                         pool {",
               "                             sshWestdest;",
+              "                         }",
+              "                     }",
+              "                 }",
+              "             }",
+              "              rule httpEastmatchrule {",
+              "                  match {",
+              "                      destination-address 0.0.0.0/0;",
+              "                      destination-port {",
+              "                          8003;",
+              "                      }",
+              "                  }",
+              "                  then {",
+              "                      destination-nat {",
+              "                          pool {",
+              "                              httpEastdest;",
+              "                          }",
+              "                      }",
+              "                  }",
+              "             }",
+              "             rule httpWestmatchrule {",
+              "                 match {",
+              "                     destination-address 0.0.0.0/0;",
+              "                     destination-port {",
+              "                         8002;",
+              "                     }",
+              "                 }",
+              "                 then {",
+              "                     destination-nat {",
+              "                         pool {",
+              "                             httpWestdest;",
               "                         }",
               "                     }",
               "                 }",
@@ -800,32 +810,15 @@
               "        route 0.0.0.0/0 next-hop 10.0.1.1;",
               "    }                                   ",
               "}"
+                  ]
             ]
-      ]
-    }
-      },
+            }
+          },
           "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-vSRX1" ] ] } }]
-        },
-        "DependsOn" : "SG1VCP1"
-    },
-    "awsVPCInspectami1" : {
-      "Type" : "AWS::EC2::Instance",
-        "Properties" : {
-            "ImageId" : {"Ref" : "LatestAmiId"},
-            "KeyName": {"Ref": "keypair"},
-            "NetworkInterfaces": [ {
-              "AssociatePublicIpAddress": "true",
-              "DeviceIndex": "0",
-              "GroupSet": [{"Ref" : "SG1VCP1"}],
-              "SubnetId" : {"Ref" : "SubnetVPCInspectmngt1"}
-            } ],
-            "InstanceType" : "t3.xlarge",
-          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCInspectami1" ] ] } }]
-          }
+        }
     },
     "awsVPCEastami1" : {
       "Type" : "AWS::EC2::Instance",
-      "DependsOn" : [ "IGW1VPCEast" ],
         "Properties" : {
             "ImageId" : {"Ref" : "LatestAmiId"},
             "KeyName": {"Ref": "keypair"},
@@ -837,9 +830,33 @@
               "SubnetId" : {"Ref" : "SubnetVPC3Eastpriv1"}
             } ],
             "InstanceType" : {"Ref" : "instype"},
-          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCEastami1" ] ] } }]
-          }
-    },
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCEastami1" ] ] } }],
+          "UserData" : {
+            "Fn::Base64" : {
+                  "Fn::Join" : [ "", [
+                    "#!/bin/bash -ex\n",
+                    "cat > /home/ec2-user/script1.sh << EOF\n",
+                    "#/bin/bash\n",
+                    "yum update -y\n",
+                    "yum install -y httpd php mysql-server php-mysqlnd\n",
+                    "systemctl enable httpd\n",
+                    "systemctl start httpd\n",
+                    "usermod -a -G apache ec2-user\n",
+                    "chown -R ec2-user:apache /var/www\n",
+                    "chmod 2775 /var/www\n",
+                    "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
+                    "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
+                    "EOF\n",
+                    "chmod 777 /home/ec2-user/script1.sh\n"
+                                    ]
+                  ]
+              }
+        }
+      }
+    }, 
     "awsVPCWestami1" : {
       "Type" : "AWS::EC2::Instance",
         "Properties" : {
@@ -853,8 +870,32 @@
               "SubnetId" : {"Ref" : "SubnetVPC2Westpriv1"}
             } ],
             "InstanceType" : {"Ref" : "instype"},
-          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCWestami1" ] ] } }]
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCWestami1" ] ] } }],
+          "UserData" : {
+            "Fn::Base64" : {
+                  "Fn::Join" : [ "", [
+                    "#!/bin/bash -ex\n",
+                    "cat > /home/ec2-user/script1.sh << EOF\n",
+                    "#/bin/bash\n",
+                    "yum update -y\n",
+                    "yum install -y httpd php mysql-server php-mysqlnd\n",
+                    "systemctl enable httpd\n",
+                    "systemctl start httpd\n",
+                    "usermod -a -G apache ec2-user\n",
+                    "chown -R ec2-user:apache /var/www\n",
+                    "chmod 2775 /var/www\n",
+                    "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
+                    "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
+                    "EOF\n",
+                    "chmod 777 /home/ec2-user/script1.sh\n"
+                                    ]
+                  ]
+              }
           }
+        }    
     },
     "vsrx1int0" : {
       "Type" : "AWS::EC2::NetworkInterface",
@@ -896,33 +937,6 @@
           "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "vSRX1-Ge0-indx3-priv2" ] ] } }]
         }
     },
-    "awsamiVPCInspectint1" : {
-      "Type" : "AWS::EC2::NetworkInterface",
-      "Properties" : {
-          "Description" : "quad-nic-West",
-          "GroupSet": [{"Ref" : "SG1VCP1"}],
-          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1West"},
-          "SourceDestCheck" : "false"
-        }
-    },
-    "awsamiVPCInspectint2" : {
-      "Type" : "AWS::EC2::NetworkInterface",
-      "Properties" : {
-          "Description" : "quad-nic-East",
-          "GroupSet": [{"Ref" : "SG1VCP1"}],
-          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1East"},
-          "SourceDestCheck" : "false"
-        }
-    },
-    "awsamiVPCInspectint3" : {
-      "Type" : "AWS::EC2::NetworkInterface",
-      "Properties" : {
-          "Description" : "quad-nic-untrust-North",
-          "GroupSet": [{"Ref" : "SG1VCP1"}],
-          "SubnetId" : {"Ref" : "SubnetVPCInspectpub1"},
-          "SourceDestCheck" : "false"
-        }
-    },
     "IntvSRX1Atach1": {
       "Type" : "AWS::EC2::NetworkInterfaceAttachment",
         "Properties" : {
@@ -947,31 +961,8 @@
           "NetworkInterfaceId" :  {"Ref" : "vsrx1int3"}
       }
     },
-    "Intawsami1Atach1": {
-      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
-        "Properties" : {
-          "DeviceIndex" : "1",
-          "InstanceId" :  {"Ref" : "awsVPCInspectami1"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiVPCInspectint1"}
-      }
-    },
-    "Intawsami1Atach2": {
-      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
-        "Properties" : {
-          "DeviceIndex" : "2",
-          "InstanceId" :  {"Ref" : "awsVPCInspectami1"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiVPCInspectint2"}
-      }
-    }, 
-    "Intawsami1Atach3": {
-      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
-        "Properties" : {
-          "DeviceIndex" : "3",
-          "InstanceId" :  {"Ref" : "awsVPCInspectami1"},
-          "NetworkInterfaceId" :  {"Ref" : "awsamiVPCInspectint3"}
-      }
-    }, 
     "EIP1" : {
+      "DependsOn" : "vSRX1",  
       "Type" : "AWS::EC2::EIP",
       "Properties" : {
           "Domain" : "VPCInspect", 
@@ -983,13 +974,6 @@
       "Properties" : {
           "Domain" : "VPCInspect", 
           "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-vSRX1-Ge-0/0/1.0-untrust" ] ] } }]
-        }
-    },
-    "EIP3" : {
-      "Type" : "AWS::EC2::EIP",
-      "Properties" : {
-          "Domain" : "VPC3", 
-          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-VPC3-AMI" ] ] } }]
         }
     },
     "AssocEIP1" : {
@@ -1011,17 +995,6 @@
       },
       "NetworkInterfaceId" : {
             "Fn::GetAtt" : [ "vsrx1int2", "Id" ]
-          }
-         }
-    },
-    "AssocEIP3" : {
-      "Type" : "AWS::EC2::EIPAssociation",
-      "Properties" : {
-      "AllocationId" : { 
-          "Fn::GetAtt" : [ "EIP3", "AllocationId" ]
-      },
-      "InstanceId" : {
-            "Ref" : "awsVPCEastami1"
           }
          }
     },
@@ -1051,25 +1024,12 @@
                         "VpnEcmpSupport" : "enable"
                       }
     },
-    "TGWVPNtest": {
-      "Type" : "AWS::EC2::TransitGateway",
-        "Properties" : {
-                        "AutoAcceptSharedAttachments" : "enable",
-                        "DefaultRouteTableAssociation" : "disable",
-                        "DefaultRouteTablePropagation" : "enable",
-                        "Description" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWVPNtest" ] ] },
-                        "DnsSupport" : "enable",
-                        "MulticastSupport" : "disable",
-                        "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWVPNtest" ] ] } }],
-                        "VpnEcmpSupport" : "enable"
-                      }
-    },
-    "VPCInspectwesttgwatc" : {
+    "VPCInspectWesttgwatc" : {
       "Type" : "AWS::EC2::TransitGatewayAttachment",
       "Properties" : {
         "SubnetIds" : [ {"Ref": "SubnetVPCInspectpriv1West"}],
         "Tags" : [
-          {"Key" : "Name", "Value" : "VPCInspectwesttgwatc"}
+          {"Key" : "Name", "Value" : "VPCInspectWesttgwatc"}
         ],
         "TransitGatewayId" : {"Ref" : "TGWWest"},
         "VpcId" : {"Ref" : "VPCInspect"}
@@ -1109,7 +1069,7 @@
       }
     },
     "TGWrtblWest" : {
-      "DependsOn" : [ "VPCInspectwesttgwatc", "VPC2Westtgwatc" ],  
+      "DependsOn" : [ "VPCInspectWesttgwatc", "VPC2Westtgwatc" ],  
       "Type" : "AWS::EC2::TransitGatewayRouteTable",
       "Properties" : {
         "Tags" : [
@@ -1122,7 +1082,7 @@
       "DependsOn" : [ "TGWrtblWest" ],  
       "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
       "Properties" : {
-          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectwesttgwatc"},
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectWesttgwatc"},
           "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
         }
     },
@@ -1138,7 +1098,7 @@
       "DependsOn" : [ "TGWWestrtbeassoc1", "TGWWestrtbeassoc2" ],  
       "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
       "Properties" : {
-          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectwesttgwatc"},
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectWesttgwatc"},
           "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
         }
     },
@@ -1150,6 +1110,8 @@
           "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
         }
     },
+
+
     "TGWrtblEast" : {
       "DependsOn" : [ "VPCInspectEasttgwatc", "VPC3Easttgwatc" ],
       "Type" : "AWS::EC2::TransitGatewayRouteTable",
@@ -1191,8 +1153,26 @@
           "TransitGatewayAttachmentId" : {"Ref": "VPC3Easttgwatc"},
           "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
         }
-    }
-  },  
+    },
+    "TGWWestroute" : {
+      "DependsOn" : [ "VPCInspectWesttgwatc", "VPC2Westtgwatc" ],  
+      "Type" : "AWS::EC2::TransitGatewayRoute",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectWesttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+      }
+    },  
+    "TGWEastroute" : {
+      "DependsOn" : [ "TGWEastrtbeassoc1", "TGWEastrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRoute",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectEasttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+      }
+    }  
+  },
   "Outputs" : {
     "SG1VCP1" :{
       "Value": {"Ref" : "SG1VCP1"}
