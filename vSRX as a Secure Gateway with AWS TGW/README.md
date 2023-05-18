@@ -30,7 +30,7 @@ The build includes the following:
 
 <h3> Route Tables  </h3>
 <p align="center">
-<img src="./png/tgw2-vsrx-rtbles.png" width="1000"/></center>
+<img src="./png/tgw2-vsrx-routes.png" width="1000"/></center>
 </p>
 
 <h3> Architectural high level VPC Inspection possibilities </h3>
