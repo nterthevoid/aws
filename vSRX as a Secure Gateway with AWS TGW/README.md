@@ -35,7 +35,7 @@ The build includes the following:
 
 <h3> Architectural high level VPC Inspection possibilities </h3>
 <p align="center">
-<img src="./png/tgw2-vsrx-hl-arch.png" width="1000"/></center>
+<img src="./png/tgw2-vsrx-hl-arch2.png" width="1000"/></center>
 </p>
 
 
