@@ -823,7 +823,7 @@
             "ImageId" : {"Ref" : "LatestAmiId"},
             "KeyName": {"Ref": "keypair"},
             "NetworkInterfaces": [ {
-              "AssociatePublicIpAddress": "true",
+              "AssociatePublicIpAddress": "false",
               "DeviceIndex": "0",
               "GroupSet": [{"Ref" : "SG1VCP2"}],
               "PrivateIpAddress" : "10.3.0.10",
@@ -863,7 +863,7 @@
             "ImageId" : {"Ref" : "LatestAmiId"},
             "KeyName": {"Ref": "keypair"},
             "NetworkInterfaces": [ {
-              "AssociatePublicIpAddress": "true",
+              "AssociatePublicIpAddress": "false",
               "DeviceIndex": "0",
               "GroupSet": [{"Ref" : "SG1VCP3"}],
               "PrivateIpAddress" : "10.2.0.10",
