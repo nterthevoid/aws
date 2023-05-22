@@ -33,7 +33,7 @@ The build includes the following:
 <img src="./png/routes.png" width="1000"/></center>
 </p>
 
-(Disclaimers and Attributions)[https://github.com/nterthevoid/aws/blob/7465001fdce6a66ed86dae65938a210e37253434/README.md]
+(Disclaimers, Attributions, Terms of use, Right)[https://github.com/nterthevoid/aws/blob/7465001fdce6a66ed86dae65938a210e37253434/README.md]
 
 
 
