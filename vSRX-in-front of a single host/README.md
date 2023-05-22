@@ -33,11 +33,7 @@ The build includes the following:
 <img src="./png/routes.png" width="1000"/></center>
 </p>
 
-@@include[../aws/README.md]
-(disclamer)[../aws/README.md]
-
-
-# testing 
+(Disclaimers and Attributions)[https://github.com/nterthevoid/aws/blob/7465001fdce6a66ed86dae65938a210e37253434/README.md]
 
 
 
