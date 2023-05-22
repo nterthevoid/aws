@@ -1,4 +1,5 @@
-# Sample templates for various AWS linux AMI deployments
+# Work in progress towards several items  
+## Sample templates for various AWS linux AMI deployments
 
 
 
