@@ -5,7 +5,7 @@ The provided AWS CloudFormation template, builds out the following design to be 
 The build includes the following:
 * Single VPC, with a single SRX firewall 
 * The vSRX can be accessed by SSH on its management interface.   
-* The SSH key pair is created via the CFT template,  THe public key, is stored in SSM in the parameter store and can be accessed there. Key content can be copy and pasted locally, or accessed via AWS cli. 
+* The SSH key pair is created via the CFT template,  The public key, is stored in SSM in the parameter store and can be accessed there. Key content can be copied and pasted locally, or accessed via AWS cli. 
 * THe vSRX has been pre-configured via cloud_init, to include interfaces, source and destination NAT, route instances and tables, and basic zone and security policies. 
 *    ***vSRX POLICIES are set to ANY ANY **** so please adjust accordingly...   
     
@@ -14,7 +14,7 @@ The build includes the following:
 
 <h3> Architectural design  </h3>
 <p align="center">
-<img src="./png/.png" width="1000"/></center>
+<img src="./png/arch.png" width="1000"/></center>
 </p>
 
 <h3> Route Tables  </h3>
