@@ -252,7 +252,7 @@
                           "            }",
                           "        }",
                           "        from-zone untrust to-zone trust {",
-                          "            policy forwardssh {",
+                          "            policy pol1 {",
                           "                match {",
                           "                    source-address any;",
                           "                    destination-address any;",
