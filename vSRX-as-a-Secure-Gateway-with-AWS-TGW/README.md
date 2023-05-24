@@ -1,7 +1,7 @@
 # A Sample deployment using a vSRX as a secure gateway between multiple AWS TGWs. Using the vSRX as an inspection VPC for North South and East West Traffic 
 
 <ul>
-In this use case, the vSRX is used to block and inspect traffic and or perform traditional UTM, NG and threat detection:
+In this example, the vSRX is used to block and inspect traffic and or perform traditional UTM, NG and threat detection:
 
 * For North bound inbound and outbound traffic from devices within other VPC attached via TGWs
 * For East and West traffic traversing through the inspection VPC
