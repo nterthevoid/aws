@@ -1,0 +1,1328 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Transit Gateway Integration",
+  "Parameters" : {
+
+    "LatestAmiId" : {
+      "Type" : "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+       "Default" : "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+     },
+     "instype": {
+         "Type": "String",
+         "AllowedValues" : ["t3.nano", "t3.micro", "t3.small", "t3.medium", "t3.large", "t3.xlarge", "t3.2xlarge"],
+         "Default": "t3.small"
+     },
+     "Addpupip": {
+         "Type": "String",
+         "Default": "0.0.0.0/0"
+     }
+  },  
+  "Mappings" : {
+    "RegionMap" : {
+      "us-east-1"       : {"srxconsec" : "ami-0053ad002ebd65df2", "srxbyol" : "ami-07e368d1e5ca0f5a6" },
+      "us-east-2"       : {"srxbyol" : "ami-0077e5411c5221898", "srxconsec" : "ami-09055beb4db491f2f" },
+      "us-west-1"       : {"srxbyol" : "ami-039c23a4a1674e6da", "srxconsec" : "ami-0c6dd3134e2afa589" },
+      "us-west-2"       : {"srxconsec" : "ami-03859f9b533e5d520", "srxbyol" : "ami-098b9fff1e4cc8791" }
+    }
+  },
+  "Resources" : {
+    "keypair" : {
+      "Type" : "AWS::EC2::KeyPair",
+      "Properties" : {
+          "KeyName" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "kp" ] ] },
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "kp" ] ] } }]
+
+        }
+    },
+    "VPCInspect" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties": {
+          "CidrBlock": "10.0.0.0/16",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "VPCInspect" ] ] } }]
+                  }
+    },
+    "VPCEast" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties": {
+          "CidrBlock": "10.3.0.0/16",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "VPCEast" ] ] } }]
+                  }
+    },
+    "VPCWest" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties": {
+          "CidrBlock": "10.2.0.0/16",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "VPCWest" ] ] } }]
+                  }
+    },
+    "SubnetVPCInspectmngt1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+          "VpcId": {
+              "Ref": "VPCInspect"
+          },
+          "CidrBlock": "10.0.1.0/24",
+          "AvailabilityZone" : {
+            "Fn::Select" : [
+              "0",
+              {
+                "Fn::GetAZs" : ""
+              }
+            ]
+          },  
+          "Tags" : [{"Key" : "Name", "Value" : "SubnetVPCInspectmngt1"}]
+      }
+    },
+    "SubnetVPCInspectpub1": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+            "VpcId": {
+                "Ref": "VPCInspect"
+            },
+            "CidrBlock": "10.0.5.0/24",
+            "AvailabilityZone" : {
+              "Fn::Select" : [
+                "0",
+                {
+                  "Fn::GetAZs" : ""
+                }
+              ]
+            },  
+            "Tags" : [{"Key" : "Name", "Value" : "SubnetVPCInspectpub1"}]
+        }
+    },
+    "SubnetVPCInspectpriv1West": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+          "VpcId": {
+              "Ref": "VPCInspect"
+          },
+          "CidrBlock": "10.0.3.0/24",
+          "AvailabilityZone" : {
+            "Fn::Select" : [
+              "0",
+              {
+                "Fn::GetAZs" : ""
+              }
+            ]
+          },         
+      "Tags" : [{"Key" : "Name", "Value" : "SubnetVPCInspectpriv1West"}]
+      }
+    },
+    "SubnetVPCInspectpriv1East": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+          "VpcId": {
+              "Ref": "VPCInspect"
+          },
+          "CidrBlock": "10.0.4.0/24",
+          "AvailabilityZone" : {
+            "Fn::Select" : [
+              "0",
+              {
+                "Fn::GetAZs" : ""
+              }
+            ]
+          },
+      "Tags" : [{"Key" : "Name", "Value" : "SubnetVPCInspectpriv1East"}]
+      }
+    },
+    "SubnetVPC2Westpriv1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+          "VpcId": {
+              "Ref": "VPCWest"
+          },
+          "CidrBlock": "10.2.0.0/24",
+          "AvailabilityZone" : {
+            "Fn::Select" : [
+              "0",
+              {
+                "Fn::GetAZs" : ""
+              }
+            ]
+          },          
+      "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC2Westpriv1"}]
+      }
+    },
+    "SubnetVPC3Eastpriv1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+          "VpcId": {
+              "Ref": "VPCEast"
+          },
+          "CidrBlock": "10.3.0.0/24",
+          "AvailabilityZone" : {
+            "Fn::Select" : [
+              "0",
+              {
+                "Fn::GetAZs" : ""
+              }
+            ]
+          },          
+      "Tags" : [{"Key" : "Name", "Value" : "SubnetVPC3Eastpriv1"}]
+      }
+    },
+    "SG1VCP1" : {
+              "Type" : "AWS::EC2::SecurityGroup",
+              "Properties" : {
+                  "GroupDescription" : "SECGroup",
+                  "SecurityGroupEgress" : [ {
+                      "CidrIp" : "0.0.0.0/0",
+                      "IpProtocol" : "-1"
+                        }
+                         ],
+                  "SecurityGroupIngress" : [
+                              { "CidrIp" : { "Ref" : "Addpupip"}, "IpProtocol" : "-1", "ToPort" : "22" }
+                              ],
+                  "VpcId": {
+                      "Ref": "VPCInspect"
+                  }
+                }
+    },
+    "SG1VCP2" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+          "GroupDescription" : "SECGroup",
+          "SecurityGroupEgress" : [ {
+              "CidrIp" : "0.0.0.0/0",
+              "IpProtocol" : "-1"
+                }
+                 ],
+          "SecurityGroupIngress" : [
+                      { "CidrIp" : { "Ref" : "Addpupip"}, "IpProtocol" : "-1", "ToPort" : "22" }
+                      ],
+          "VpcId": {
+              "Ref": "VPCEast"
+          }
+        }
+      },
+    "SG1VCP3" : {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "Properties" : {
+            "GroupDescription" : "SECGroup",
+            "SecurityGroupEgress" : [ {
+                "CidrIp" : "0.0.0.0/0",
+                "IpProtocol" : "-1"
+                  }
+                   ],
+            "SecurityGroupIngress" : [
+                        { "CidrIp" : { "Ref" : "Addpupip"}, "IpProtocol" : "-1", "ToPort" : "22" }
+                        ],
+            "VpcId": {
+                "Ref": "VPCWest"
+            }
+          }
+      },
+    "SGBaseIngressSG1VCP1": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "CidrIp" : "10.0.0.0/8",
+                    "GroupId": {
+                        "Ref": "SG1VCP1"
+                        },
+                      "IpProtocol": "-1"
+                }
+    },
+    "SGBaseIngressSG1VCP2": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "CidrIp" : "10.0.0.0/8",
+                    "GroupId": {
+                        "Ref": "SG1VCP2"
+                        },
+                      "IpProtocol": "-1"
+                }
+    },
+    "IGW1VPCInspect" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {
+        "Tags" : [{"Key" : "Name", "Value" : "IGW1VPCInspect"}]
+      }
+    },
+    "IGWAttachVPCInspect":{
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "InternetGatewayId" : {"Ref":"IGW1VPCInspect"},
+          "VpcId" : {"Ref":"VPCInspect"}
+      }
+    },
+    "RTblVPCInspectmngt1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "VPCInspect"
+        },
+       "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectmngt1"}]
+      }
+    },
+    "Route1VPCInspectSubnetmngt1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+         "RouteTableId" : { "Ref" : "RTblVPCInspectmngt1" },
+         "DestinationCidrBlock" : "0.0.0.0/0",
+         "GatewayId" : { "Ref" : "IGW1VPCInspect" }
+      }
+    },
+    "SubnetAssignVPCInspectRTblmngt1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPCInspectmngt1"},
+          "SubnetId" : {"Ref" : "SubnetVPCInspectmngt1"}
+        }
+    }, 
+    "RTblVPCInspectpub1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "VPCInspect"
+        },
+       "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectpub1"}]
+      }
+    },
+    "Route1VPCInspectSubnetpub1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+         "RouteTableId" : { "Ref" : "RTblVPCInspectpub1" },
+         "DestinationCidrBlock" : "0.0.0.0/0",
+         "GatewayId" : { "Ref" : "IGW1VPCInspect" }
+      }
+    },
+    "SubnetAssignVPCInspectRTblpub1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPCInspectpub1"},
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpub1"}
+        }
+    },     
+    "RTblVPCInspectpriv1West": {
+      "DependsOn" : [ "TGWWest" ],
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "VPCInspect"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectpriv1West"}]
+      }
+    },
+    "Route1VPCInspectSubnetpriv1West1" : {
+      "DependsOn" : [ "TGWWest" ],
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1West" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "NetworkInterfaceId" : { "Ref" : "vsrx1int1" }
+      }
+    },
+    "Route1VPCInspectSubnetpriv1West2" : {
+      "DependsOn" : [ "VPCInspectWesttgwatc" ], 
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1West" },
+        "DestinationCidrBlock" : "10.2.0.0/24",
+        "TransitGatewayId" : { "Ref" : "TGWWest" }
+      }
+    },
+    "SubnetAssignVPCInspectRTblpriv1" : {
+      "DependsOn" : [ "TGWWest" ],
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPCInspectpriv1West"},
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1West"}
+        }
+    },     
+   "RTblVPCInspectpriv1East": {
+      "DependsOn" : [ "TGWEast" ],
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "VPCInspect"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPCInspectpriv1East"}]
+      }
+    },
+    "Route1VPCInspectSubnetpriv1East1" : {
+      "DependsOn" : [ "TGWEast" ],
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1East" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "NetworkInterfaceId" : { "Ref" : "vsrx1int3" }
+    }
+    },
+    "Route1VPCInspectSubnetpriv1East2" : {
+      "DependsOn" : [ "VPCInspectEasttgwatc" ],
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPCInspectpriv1East" },
+        "DestinationCidrBlock" : "10.3.0.0/24",
+        "TransitGatewayId" : { "Ref" : "TGWEast" }
+      }
+    },
+    "SubnetAssignVPCEastRTblpriv1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPCInspectpriv1East"},
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1East"}
+        }
+    },
+    "RTblVPC2Westpriv1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "VPCWest"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC2Westpriv1"}]
+        }
+      },
+      "Route1VPC2WestSubnetpriv1" : {
+        "Type" : "AWS::EC2::Route",
+        "Properties" : {
+          "RouteTableId" : { "Ref" : "RTblVPC2Westpriv1" },
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "TransitGatewayId" : { "Ref" : "TGWWest" }
+        },
+        "DependsOn" : [ "VPC2Westtgwatc" ]
+      },
+      "Route2VPC2WestSubnetpriv1" : {
+        "Type" : "AWS::EC2::Route",
+        "Properties" : {
+          "RouteTableId" : { "Ref" : "RTblVPC2Westpriv1" },
+          "DestinationCidrBlock" : "10.0.0.0/16",
+          "TransitGatewayId" : { "Ref" : "TGWWest" }
+        },
+        "DependsOn" : [ "VPC2Westtgwatc" ]
+      },
+      "Route3VPC2WestSubnetpriv1" : {
+        "Type" : "AWS::EC2::Route",
+        "Properties" : {
+          "RouteTableId" : { "Ref" : "RTblVPC2Westpriv1" },
+          "DestinationCidrBlock" : "10.3.0.0/16",
+          "TransitGatewayId" : { "Ref" : "TGWWest" }
+        },
+        "DependsOn" : [ "VPC2Westtgwatc" ]
+      },
+     "SubnetAssignVPC2WestRTblpriv1" : {
+        "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties" : {
+            "RouteTableId" : {"Ref" : "RTblVPC2Westpriv1"},
+            "SubnetId" : {"Ref" : "SubnetVPC2Westpriv1"}
+        }
+     },
+    "RTblVPC3Eastpriv1": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId": {
+            "Ref": "VPCEast"
+        },
+        "Tags" : [{"Key" : "Name", "Value" : "RTblVPC3Eastpriv1"}]
+      }
+    },
+    "Route1VPC3EastSubnetpriv1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC3Eastpriv1" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "TransitGatewayId" : { "Ref" : "TGWEast" }
+      },
+      "DependsOn" : [ "VPC3Easttgwatc" ]
+    },
+    "Route2VPC3EastSubnetpriv1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC3Eastpriv1" },
+        "DestinationCidrBlock" : "10.0.0.0/16",
+        "TransitGatewayId" : { "Ref" : "TGWEast" }
+      },
+      "DependsOn" : [ "VPC3Easttgwatc" ]
+    },
+    "Route3VPC3EastSubnetpriv1" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RTblVPC3Eastpriv1" },
+        "DestinationCidrBlock" : "10.2.0.0/16",
+        "TransitGatewayId" : { "Ref" : "TGWEast" }
+      },
+      "DependsOn" : [ "VPC3Easttgwatc" ]
+    },
+    "SubnetAssignVPCE3astRTblpriv1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref" : "RTblVPC3Eastpriv1"},
+          "SubnetId" : {"Ref" : "SubnetVPC3Eastpriv1"}
+      }
+   },
+   "vSRX1": {
+      "DependsOn" : "SG1VCP1",
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone" : {
+          "Fn::Select" : [
+            "0",
+            {
+              "Fn::GetAZs" : ""
+            }
+          ]
+        },
+        "NetworkInterfaces" : [ {
+            "NetworkInterfaceId" : {"Ref" : "vsrx1int0"}, "DeviceIndex" : "0" }
+           ],  
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "srxconsec"]},
+          "KeyName": {"Ref": "keypair"},
+          "InstanceType": "c5.2xlarge",
+          "UserData": {
+            "Fn::Base64": {
+            "Fn::Join": [
+            "\n",
+            [
+            "#junos-config",
+            "system {",
+            "host-name right-vsrx;",
+            "services {",
+            "ssh;",
+            "}",
+            "syslog {",
+            "file kmd-logs {",
+            "daemon info;",
+            "match KMD;",
+            "}",
+            "}",
+            "}",
+            "services {",
+            "application-identification {",
+            "download {",
+            "url https://services.netscreen.com/cgi-bin/index.cgi;",
+            "ignore-server-validation;",
+            "}",
+            "}",
+            "}",
+            "security {",
+            "log {",
+            "mode stream;",
+            "format sd-syslog;",
+            "report;",
+            "}",
+            "ike {",
+            "traceoptions {",
+            "file marks-ike;",
+            "flag all;",
+            "}",
+            "proposal ike-auth-prop {",
+            "authentication-method pre-shared-keys;",
+            "dh-group group14;",
+            "authentication-algorithm sha-256;",
+            "encryption-algorithm aes-256-cbc;",
+            "}",
+            "policy ike-policy {",
+            "proposals ike-auth-prop;",
+            "pre-shared-key ascii-text \"$9$YjgUHf5F9A0qmpBEcMWjHkmz3CA0cyKFnrv\"; ## SECRET-DATA",
+            "}",
+            "gateway remote {",
+            "ike-policy ike-policy;",
+            "address 54.177.196.192;",
+            "local-identity key-id 12345cba;",
+            "remote-identity key-id 12345cba;",
+            "external-interface ge-0/0/1.0;",
+            "version v2-only;",
+            "}",
+            "}",
+            "ipsec {",
+            "traceoptions {",
+            "flag security-associations;",
+            "}",
+            "proposal ipsec-prop {",
+            "protocol esp;",
+            "authentication-algorithm hmac-sha-256-128;",
+            "encryption-algorithm aes-256-cbc;",
+            "}",
+            "policy ipsec-policy {",
+            "proposals ipsec-prop;",
+            "}",
+            "vpn vpc {",
+            "bind-interface st0.0;",
+            "ike {",
+            "gateway remote;",
+            "ipsec-policy ipsec-policy;",
+            "}",
+            "establish-tunnels on-traffic;",
+            "}",
+            "}",
+            "nat {",
+            "source {",
+            "rule-set rule-set-1 {",
+            "from interface [ ge-0/0/0.0 ge-0/0/2.0 ];",
+            "to interface ge-0/0/1.0;",
+            "rule rule-1 {",
+            "match {",
+            "source-address 0.0.0.0/0;",
+            "destination-address 0.0.0.0/0;",
+            "}",
+            "then {",
+            "source-nat {",
+            "interface;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "rule-set vpn-source-nat {",
+            "from zone [ trust-East trust-West ];",
+            "to zone vpn;",
+            "rule vpn-nat {",
+            "match {",
+            "source-address 0.0.0.0/0;",
+            "destination-address 192.168.0.0/16;",
+            "}",
+            "then {",
+            "source-nat {",
+            "interface;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "}",
+            "destination {",
+            "pool sshWestdest {",
+            "routing-instance {",
+            "aws;",
+            "}",
+            "address 10.2.0.10/32 port 22;",
+            "}",
+            "pool httpWestdest {",
+            "routing-instance {",
+            "aws;",
+            "}",
+            "address 10.2.0.10/32 port 80;",
+            "}",
+            "pool sshEastdest {",
+            "routing-instance {",
+            "aws;",
+            "}",
+            "address 10.3.0.10/32 port 22;",
+            "}",
+            "pool httpEastdest {",
+            "routing-instance {",
+            "aws;",
+            "}",
+            "address 10.3.0.10/32 port 80;",
+            "}",
+            "rule-set forwardmap {",
+            "from interface ge-0/0/1.0;",
+            "rule sshEastmatchrule {",
+            "match {",
+            "destination-address 0.0.0.0/0;",
+            "destination-port {",
+            "2203;",
+            "}",
+            "}",
+            "then {",
+            "destination-nat {",
+            "pool {",
+            "sshEastdest;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "rule sshWestmatchrule {",
+            "match {",
+            "destination-address 0.0.0.0/0;",
+            "destination-port {",
+            "2202;",
+            "}",
+            "}",
+            "then {",
+            "destination-nat {",
+            "pool {",
+            "sshWestdest;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "rule httpEastmatchrule {",
+            "match {",
+            "destination-address 0.0.0.0/0;",
+            "destination-port {",
+            "8003;",
+            "}",
+            "}",
+            "then {",
+            "destination-nat {",
+            "pool {",
+            "httpEastdest;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "rule httpWestmatchrule {",
+            "match {",
+            "destination-address 0.0.0.0/0;",
+            "destination-port {",
+            "8002;",
+            "}",
+            "}",
+            "then {",
+            "destination-nat {",
+            "pool {",
+            "httpWestdest;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "}",
+            "}",
+            "static {",
+            "rule-set vpn-static {",
+            "from interface st0.0;",
+            "rule 10-2-0-10 {",
+            "match {",
+            "source-address 0.0.0.0/0;",
+            "destination-address 192.168.3.21/32;",
+            "}",
+            "then {",
+            "static-nat {",
+            "prefix {",
+            "10.2.0.10/32;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "rule 10-3-0-10 {",
+            "match {",
+            "source-address 0.0.0.0/0;",
+            "destination-address 192.168.3.22/32;",
+            "}",
+            "then {",
+            "static-nat {",
+            "prefix {",
+            "10.3.0.10/32;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "}",
+            "}",
+            "}",
+            "policies {",
+            "from-zone trust-West to-zone untrust-North {",
+            "policy allow-all-out {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone trust-East to-zone untrust-North {",
+            "policy allow-all-out {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone untrust-North to-zone trust-West {",
+            "policy fwrd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone untrust-North to-zone trust-East {",
+            "policy fwrd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone trust-West to-zone trust-East {",
+            "policy fwrd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone trust-East to-zone trust-West {",
+            "policy fwrd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone trust-West to-zone vpn {",
+            "policy frd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone trust-East to-zone vpn {",
+            "policy frd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone vpn to-zone trust-West {",
+            "policy frd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "from-zone vpn to-zone trust-East {",
+            "policy frd {",
+            "match {",
+            "source-address any;",
+            "destination-address any;",
+            "application any;",
+            "}",
+            "then {",
+            "permit;",
+            "count;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "zones {",
+            "security-zone untrust-North {",
+            "host-inbound-traffic {",
+            "system-services {",
+            "dhcp;",
+            "ike;",
+            "ping;",
+            "}",
+            "}",
+            "interfaces {",
+            "ge-0/0/1.0;",
+            "}",
+            "}",
+            "security-zone trust-West {",
+            "host-inbound-traffic {",
+            "system-services {",
+            "all;",
+            "}",
+            "}",
+            "interfaces {",
+            "ge-0/0/0.0;",
+            "}",
+            "}",
+            "security-zone trust-East {",
+            "host-inbound-traffic {",
+            "system-services {",
+            "all;",
+            "}",
+            "}",
+            "interfaces {",
+            "ge-0/0/2.0;",
+            "}",
+            "}",
+            "security-zone vpn {",
+            "host-inbound-traffic {",
+            "system-services {",
+            "ike;",
+            "ping;",
+            "ssh;",
+            "}",
+            "}",
+            "interfaces {",
+            "st0.0;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "interfaces {",
+            "ge-0/0/0 {",
+            "mtu 9192;",
+            "unit 0 {",
+            "family inet {",
+            "dhcp;",
+            "}",
+            "}",
+            "}",
+            "ge-0/0/1 {",
+            "mtu 9192;",
+            "unit 0 {",
+            "family inet {",
+            "dhcp;",
+            "}",
+            "}",
+            "}",
+            "ge-0/0/2 {",
+            "mtu 9192;",
+            "unit 0 {",
+            "family inet {",
+            "dhcp;",
+            "}",
+            "}",
+            "}",
+            "fxp0 {",
+            "mtu 9192;",
+            "unit 0 {",
+            "family inet {",
+            "dhcp;",
+            "}",
+            "}",
+            "}",
+            "st0 {",
+            "unit 0 {",
+            "family inet {",
+            "address 192.168.3.2/24;",
+            "}",
+            "}",
+            "}",
+            "}",
+            "routing-instances {",
+            "aws {",
+            "routing-options {",
+            "static {",
+            "route 0.0.0.0/0 next-hop 10.0.5.1;",
+            "route 10.2.0.0/16 next-hop 10.0.3.1;",
+            "route 10.3.0.0/16 next-hop 10.0.4.1;",
+            "route 192.168.3.0/24 next-hop st0.0;",
+            "}",
+            "}",
+            "interface ge-0/0/0.0;",
+            "interface ge-0/0/1.0;",
+            "interface ge-0/0/2.0;",
+            "interface st0.0;",
+            "instance-type virtual-router;",
+            "}",
+            "}",
+            "routing-options {",
+            "static {",
+            "route 0.0.0.0/0 next-hop 10.0.1.1;",
+            "}",
+            "}"
+            ]
+            ]
+            }
+            },
+            
+
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-vSRX1" ] ] } }]
+        }
+    },
+    "awsVPCEastami1" : {
+      "Type" : "AWS::EC2::Instance",
+        "Properties" : {
+            "ImageId" : {"Ref" : "LatestAmiId"},
+            "KeyName": {"Ref": "keypair"},
+            "NetworkInterfaces": [ {
+              "AssociatePublicIpAddress": "false",
+              "DeviceIndex": "0",
+              "GroupSet": [{"Ref" : "SG1VCP2"}],
+              "PrivateIpAddress" : "10.3.0.10",
+              "SubnetId" : {"Ref" : "SubnetVPC3Eastpriv1"}
+            } ],
+            "InstanceType" : {"Ref" : "instype"},
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCEastami1" ] ] } }],
+          "UserData" : {
+            "Fn::Base64" : {
+                  "Fn::Join" : [ "", [
+                    "#!/bin/bash -ex\n",
+                    "cat > /home/ec2-user/script1.sh << EOF\n",
+                    "#/bin/bash\n",
+                    "yum update -y\n",
+                    "yum install -y httpd php mysql-server php-mysqlnd\n",
+                    "systemctl enable httpd\n",
+                    "systemctl start httpd\n",
+                    "usermod -a -G apache ec2-user\n",
+                    "chown -R ec2-user:apache /var/www\n",
+                    "chmod 2775 /var/www\n",
+                    "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
+                    "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
+                    "EOF\n",
+                    "chmod 777 /home/ec2-user/script1.sh\n"
+                                    ]
+                  ]
+              }
+        }
+      }
+    }, 
+    "awsVPCWestami1" : {
+      "Type" : "AWS::EC2::Instance",
+        "Properties" : {
+            "ImageId" : {"Ref" : "LatestAmiId"},
+            "KeyName": {"Ref": "keypair"},
+            "NetworkInterfaces": [ {
+              "AssociatePublicIpAddress": "false",
+              "DeviceIndex": "0",
+              "GroupSet": [{"Ref" : "SG1VCP3"}],
+              "PrivateIpAddress" : "10.2.0.10",
+              "SubnetId" : {"Ref" : "SubnetVPC2Westpriv1"}
+            } ],
+            "InstanceType" : {"Ref" : "instype"},
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "-awsVPCWestami1" ] ] } }],
+          "UserData" : {
+            "Fn::Base64" : {
+                  "Fn::Join" : [ "", [
+                    "#!/bin/bash -ex\n",
+                    "cat > /home/ec2-user/script1.sh << EOF\n",
+                    "#/bin/bash\n",
+                    "yum update -y\n",
+                    "yum install -y httpd php mysql-server php-mysqlnd\n",
+                    "systemctl enable httpd\n",
+                    "systemctl start httpd\n",
+                    "usermod -a -G apache ec2-user\n",
+                    "chown -R ec2-user:apache /var/www\n",
+                    "chmod 2775 /var/www\n",
+                    "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
+                    "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
+                    "EOF\n",
+                    "chmod 777 /home/ec2-user/script1.sh\n"
+                                    ]
+                  ]
+              }
+          }
+        }    
+    },
+    "vsrx1int0" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "Junos fxp0",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPCInspectmngt1"},
+          "SourceDestCheck" : "false",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "vSRX1-fxp0" ] ] } }]
+        }
+    },
+    "vsrx1int1" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "Junos Ge-0/0/0.0 zone trust West",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1West"},
+          "SourceDestCheck" : "false",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "vSRX1-Ge0-indx1-priv1" ] ] } }]
+        }
+    },
+    "vsrx1int2" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "Junos Ge-0/0/1.0 zone untrust North",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpub1"},
+          "SourceDestCheck" : "false",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "vSRX1-Ge0-indx2-pub" ] ] } }]
+        }
+    },
+    "vsrx1int3" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+          "Description" : "Junos Ge-0/0/2.0 zone trust East",
+          "GroupSet": [{"Ref" : "SG1VCP1"}],
+          "SubnetId" : {"Ref" : "SubnetVPCInspectpriv1East"},
+          "SourceDestCheck" : "false",
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "vSRX1-Ge0-indx3-priv2" ] ] } }]
+        }
+    },
+    "IntvSRX1Atach1": {
+      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+        "Properties" : {
+          "DeviceIndex" : "1",
+          "InstanceId" :  {"Ref" : "vSRX1"},
+          "NetworkInterfaceId" :  {"Ref" : "vsrx1int1"}
+      }
+    },
+    "IntvSRX1Atach2": {
+      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+        "Properties" : {
+          "DeviceIndex" : "2",
+          "InstanceId" :  {"Ref" : "vSRX1"},
+          "NetworkInterfaceId" :  {"Ref" : "vsrx1int2"}
+      }
+    },
+    "IntvSRX1Atach3": {
+      "Type" : "AWS::EC2::NetworkInterfaceAttachment",
+        "Properties" : {
+          "DeviceIndex" : "3",
+          "InstanceId" :  {"Ref" : "vSRX1"},
+          "NetworkInterfaceId" :  {"Ref" : "vsrx1int3"}
+      }
+    },
+    "EIP1" : {
+      "DependsOn" : "vSRX1",  
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+          "Domain" : "VPCInspect", 
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-vSRX1-fxp0" ] ] } }]
+        }
+    },
+    "EIP2" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+          "Domain" : "VPCInspect", 
+          "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "EIP-vSRX1-Ge-0/0/1.0-untrust" ] ] } }]
+        }
+    },
+    "AssocEIP1" : {
+      "Type" : "AWS::EC2::EIPAssociation",
+      "Properties" : {
+      "AllocationId" : { 
+          "Fn::GetAtt" : [ "EIP1", "AllocationId" ]
+      },
+      "NetworkInterfaceId" : {
+            "Fn::GetAtt" : [ "vsrx1int0", "Id" ]
+          }
+         }
+    },
+    "AssocEIP2" : {
+      "Type" : "AWS::EC2::EIPAssociation",
+      "Properties" : {
+      "AllocationId" : { 
+          "Fn::GetAtt" : [ "EIP2", "AllocationId" ]
+      },
+      "NetworkInterfaceId" : {
+            "Fn::GetAtt" : [ "vsrx1int2", "Id" ]
+          }
+         }
+    },
+    "TGWWest": {
+      "Type" : "AWS::EC2::TransitGateway",
+        "Properties" : {
+                        "AutoAcceptSharedAttachments" : "enable",
+                        "DefaultRouteTableAssociation" : "disable",
+                        "DefaultRouteTablePropagation" : "disable",
+                        "Description" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWWest" ] ] },
+                        "DnsSupport" : "enable",
+                        "MulticastSupport" : "disable",
+                        "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWWest" ] ] } }],
+                        "VpnEcmpSupport" : "enable"
+                      }
+    },
+    "TGWEast": {
+      "Type" : "AWS::EC2::TransitGateway",
+        "Properties" : {
+                        "AutoAcceptSharedAttachments" : "enable",
+                        "DefaultRouteTableAssociation" : "disable",
+                        "DefaultRouteTablePropagation" : "disable",
+                        "Description" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWEast" ] ] },
+                        "DnsSupport" : "enable",
+                        "MulticastSupport" : "disable",
+                        "Tags" : [{"Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref" : "AWS::StackName"}, "TGWEast" ] ] } }],
+                        "VpnEcmpSupport" : "enable"
+                      }
+    },
+    "VPCInspectWesttgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+        "SubnetIds" : [ {"Ref": "SubnetVPCInspectpriv1West"}],
+        "Tags" : [
+          {"Key" : "Name", "Value" : "VPCInspectWesttgwatc"}
+        ],
+        "TransitGatewayId" : {"Ref" : "TGWWest"},
+        "VpcId" : {"Ref" : "VPCInspect"}
+      }
+    },
+    "VPCInspectEasttgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+        "SubnetIds" : [ {"Ref": "SubnetVPCInspectpriv1East"}],
+        "Tags" : [
+          {"Key" : "Name", "Value" : "VPCInspectEasttgwatc"}
+        ],
+        "TransitGatewayId" : {"Ref" : "TGWEast"},
+        "VpcId" : {"Ref" : "VPCInspect"}
+      }
+    },
+    "VPC2Westtgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+        "SubnetIds" : [ {"Ref": "SubnetVPC2Westpriv1"}],
+        "Tags" : [
+          {"Key" : "Name", "Value" : "VPC2Westtgwatc"}
+        ],
+        "TransitGatewayId" : {"Ref" : "TGWWest"},
+        "VpcId" : {"Ref" : "VPCWest"}
+      }
+    },
+    "VPC3Easttgwatc" : {
+      "Type" : "AWS::EC2::TransitGatewayAttachment",
+      "Properties" : {
+        "SubnetIds" : [ {"Ref": "SubnetVPC3Eastpriv1"}],
+        "Tags" : [
+          {"Key" : "Name", "Value" : "VPC3Easttgwatc"}
+        ],
+        "TransitGatewayId" : {"Ref" : "TGWEast"},
+        "VpcId" : {"Ref" : "VPCEast"}
+      }
+    },
+    "TGWrtblWest" : {
+      "DependsOn" : [ "VPCInspectWesttgwatc", "VPC2Westtgwatc" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTable",
+      "Properties" : {
+        "Tags" : [
+          {"Key" : "Name", "Value" : "TGWrtblWest"}
+        ],
+          "TransitGatewayId" : {"Ref" : "TGWWest"}
+        }
+    },
+    "TGWWestrtbeassoc1" : {
+      "DependsOn" : [ "TGWrtblWest" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectWesttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWWestrtbeassoc2" : {
+      "DependsOn" : [ "TGWrtblWest" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC2Westtgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWWestrtbprop1" : {
+      "DependsOn" : [ "TGWWestrtbeassoc1", "TGWWestrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectWesttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+    "TGWWestrtbprop2" : {
+      "DependsOn" : [ "TGWWestrtbeassoc1", "TGWWestrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC2Westtgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+        }
+    },
+
+
+    "TGWrtblEast" : {
+      "DependsOn" : [ "VPCInspectEasttgwatc", "VPC3Easttgwatc" ],
+      "Type" : "AWS::EC2::TransitGatewayRouteTable",
+      "Properties" : {
+        "Tags" : [
+          {"Key" : "Name", "Value" : "TGWrtblEast"}
+        ],
+          "TransitGatewayId" : {"Ref" : "TGWEast"}
+        }
+    },
+    "TGWEastrtbeassoc1" : {
+      "DependsOn" : [ "TGWrtblEast" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectEasttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWEastrtbeassoc2" : {
+      "DependsOn" : [ "TGWrtblEast" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC3Easttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWEastrtbprop1" : {
+      "DependsOn" : [ "TGWEastrtbeassoc1", "TGWEastrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectEasttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWEastrtbprop2" : {
+      "DependsOn" : [ "TGWEastrtbeassoc1", "TGWEastrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties" : {
+          "TransitGatewayAttachmentId" : {"Ref": "VPC3Easttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+        }
+    },
+    "TGWWestroute" : {
+      "DependsOn" : [ "VPCInspectWesttgwatc", "VPC2Westtgwatc" ],  
+      "Type" : "AWS::EC2::TransitGatewayRoute",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectWesttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblWest"}
+      }
+    },  
+    "TGWEastroute" : {
+      "DependsOn" : [ "TGWEastrtbeassoc1", "TGWEastrtbeassoc2" ],  
+      "Type" : "AWS::EC2::TransitGatewayRoute",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "TransitGatewayAttachmentId" : {"Ref": "VPCInspectEasttgwatc"},
+          "TransitGatewayRouteTableId" : {"Ref" : "TGWrtblEast"}
+      }
+    }  
+  },
+  "Outputs" : {
+    "SG1VCP1" :{
+      "Value": {"Ref" : "SG1VCP1"}
+    },
+    "SubnetVPCInspectpub1" :{
+      "Value": {"Ref" : "SubnetVPCInspectpub1"}
+    },
+    "VPCInspect" :{
+      "Value": {"Ref" : "VPCInspect"}
+    },
+    "LatestAmiId" :{
+      "Value": {"Ref" : "LatestAmiId"}
+    },
+    "vSRX1" :{
+      "Value": {"Ref" : "vSRX1"}
+    }
+  }
+}
