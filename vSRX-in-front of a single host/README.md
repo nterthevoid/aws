@@ -25,7 +25,7 @@ The build includes the following:
 
 <h3> Architectural design  </h3>
 <p align="center">
-<img src="./png/.png" width="1000"/></center>
+<img src="./png/arch.png" width="1000"/></center>
 </p>
 
 <h3> Route Tables  </h3>
