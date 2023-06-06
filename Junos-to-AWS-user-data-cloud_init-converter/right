@@ -1,0 +1,513 @@
+## Last commit: 2023-06-02 20:40:26 UTC by ec2-user
+version 20.4R3.8;
+groups {
+    aws-default {
+        system {
+            root-authentication {
+                encrypted-password *disabled*; ## SECRET-DATA
+            }
+            scripts {
+                translation {
+                    max-datasize 512m;
+                }
+            }
+            login {
+                user ec2-user {
+                    full-name juniper-aws-ec2-user;
+                    uid 100;
+                    class super-user;
+                    authentication {
+                        ssh-rsa "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCK1lr8PZVFR0/KhKdMkxJ54Cdj9F+hJGWYPsn/ZaYueFs0cOFpoWteHsLBWttAKK9pFx5PhPzpODFZ6QgXstQ1K6KZwnTF2U/GKMfogf94ghxP2hjTO4XERODXI/fp8q/XPpbqj/Z/koedO1c7Gu9/hE5uQlz2fHNyraB/izfkTHLPMqEZUqcVEcGfJ2jqXql8Q69tj3lfT5Ani2hyahggkiUAarK2pbt0zzex6KK8IvIMDkkQyem2lyi+nsPN9CZrAymKefDjqLZqeRgvf8ib3yxqfjFahqsNVAJthxVOSF8pGxfSE49pZgvGU/gG1QG19etwBbUNkJ3sOYcA7zaN tgw-uc-2-kp"; ## SECRET-DATA
+                    }
+                }
+            }
+            services {
+                ssh {
+                    no-passwords;
+                }
+                netconf {               
+                    ssh;
+                }
+                web-management {
+                    https {
+                        system-generated-certificate;
+                    }
+                }
+            }
+            license {
+                autoupdate {
+                    url https://ae1.juniper.net/junos/key_retrieval;
+                }
+            }
+        }
+    }
+}
+apply-groups aws-default;
+#junos-config        
+system {
+    host-name right-vsrx;
+    services {
+        ssh;
+    }
+    syslog {
+        file kmd-logs {
+            daemon info;
+            match KMD;
+        }
+    }
+}                                       
+services {
+    application-identification {
+        download {
+            url https://services.netscreen.com/cgi-bin/index.cgi;
+            ignore-server-validation;
+        }
+    }
+}
+security {
+    log {
+        mode stream;
+        format sd-syslog;
+        report;
+    }
+    ike {
+        traceoptions {
+            file marks-ike;
+            flag all;
+        }
+        proposal ike-auth-prop {
+            authentication-method pre-shared-keys;
+            dh-group group14;
+            authentication-algorithm sha-256;
+            encryption-algorithm aes-256-cbc;
+        }
+        policy ike-policy {
+            proposals ike-auth-prop;
+            pre-shared-key ascii-text "$9$YjgUHf5F9A0qmpBEcMWjHkmz3CA0cyKFnrv"; ## SECRET-DATA
+        }
+        gateway remote {                
+            ike-policy ike-policy;
+            address 54.177.196.192;
+            local-identity key-id 12345cba;
+            remote-identity key-id 12345cba;
+            external-interface ge-0/0/1.0;
+            version v2-only;
+        }
+    }
+    ipsec {
+        traceoptions {
+            flag security-associations;
+        }
+        proposal ipsec-prop {
+            protocol esp;
+            authentication-algorithm hmac-sha-256-128;
+            encryption-algorithm aes-256-cbc;
+        }
+        policy ipsec-policy {
+            proposals ipsec-prop;
+        }
+        vpn vpc {
+            bind-interface st0.0;
+            ike {
+                gateway remote;
+                ipsec-policy ipsec-policy;
+            }
+            establish-tunnels on-traffic;
+        }
+    }
+    nat {                               
+        source {
+            rule-set rule-set-1 {
+                from interface [ ge-0/0/0.0 ge-0/0/2.0 ];
+                to interface ge-0/0/1.0;
+                rule rule-1 {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                    }
+                    then {
+                        source-nat {
+                            interface;
+                        }
+                    }
+                }
+            }
+            rule-set vpn-source-nat {
+                from zone [ trust-East trust-West ];
+                to zone vpn;
+                rule vpn-nat {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 192.168.0.0/16;
+                    }
+                    then {
+                        source-nat {
+                            interface;
+                        }
+                    }
+                }                       
+            }
+        }
+        destination {
+            pool sshWestdest {
+                routing-instance {
+                    aws;
+                }
+                address 10.2.0.10/32 port 22;
+            }
+            pool httpWestdest {
+                routing-instance {
+                    aws;
+                }
+                address 10.2.0.10/32 port 80;
+            }
+            pool sshEastdest {
+                routing-instance {
+                    aws;
+                }
+                address 10.3.0.10/32 port 22;
+            }
+            pool httpEastdest {
+                routing-instance {
+                    aws;
+                }
+                address 10.3.0.10/32 port 80;
+            }
+            rule-set forwardmap {
+                from interface ge-0/0/1.0;
+                rule sshEastmatchrule { 
+                    match {
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            2203;
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                sshEastdest;
+                            }
+                        }
+                    }
+                }
+                rule sshWestmatchrule {
+                    match {
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            2202;
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                sshWestdest;
+                            }
+                        }
+                    }
+                }
+                rule httpEastmatchrule {
+                    match {
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            8003;
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                httpEastdest;
+                            }
+                        }
+                    }
+                }
+                rule httpWestmatchrule {
+                    match {
+                        destination-address 0.0.0.0/0;
+                        destination-port {
+                            8002;
+                        }
+                    }
+                    then {
+                        destination-nat {
+                            pool {
+                                httpWestdest;
+                            }
+                        }
+                    }
+                }
+            }                           
+        }
+        static {
+            rule-set vpn-static {
+                from interface st0.0;
+                rule 10-2-0-10 {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 192.168.3.21/32;
+                    }
+                    then {
+                        static-nat {
+                            prefix {
+                                10.2.0.10/32;
+                            }
+                        }
+                    }
+                }
+                rule 10-3-0-10 {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 192.168.3.22/32;
+                    }
+                    then {
+                        static-nat {
+                            prefix {
+                                10.3.0.10/32;
+                            }
+                        }
+                    }
+                }                       
+            }
+        }
+    }
+    policies {
+        from-zone trust-West to-zone untrust-North {
+            policy allow-all-out {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust-East to-zone untrust-North {
+            policy allow-all-out {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }                               
+        from-zone untrust-North to-zone trust-West {
+            policy fwrd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone untrust-North to-zone trust-East {
+            policy fwrd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust-West to-zone trust-East {
+            policy fwrd {
+                match {
+                    source-address any; 
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust-East to-zone trust-West {
+            policy fwrd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust-West to-zone vpn {
+            policy frd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {                  
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone trust-East to-zone vpn {
+            policy frd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+        from-zone vpn to-zone trust-West {
+            policy frd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }                           
+        }
+        from-zone vpn to-zone trust-East {
+            policy frd {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    count;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone untrust-North {
+            host-inbound-traffic {
+                system-services {
+                    dhcp;
+                    ike;
+                    ping;
+                }
+            }
+            interfaces {
+                ge-0/0/1.0;
+            }
+        }
+        security-zone trust-West {
+            host-inbound-traffic {      
+                system-services {
+                    all;
+                }
+            }
+            interfaces {
+                ge-0/0/0.0;
+            }
+        }
+        security-zone trust-East {
+            host-inbound-traffic {
+                system-services {
+                    all;
+                }
+            }
+            interfaces {
+                ge-0/0/2.0;
+            }
+        }
+        security-zone vpn {
+            host-inbound-traffic {
+                system-services {
+                    ike;
+                    ping;
+                    ssh;
+                }
+            }
+            interfaces {
+                st0.0;
+            }
+        }                               
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    ge-0/0/1 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    ge-0/0/2 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    fxp0 {
+        mtu 9192;
+        unit 0 {                        
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    st0 {
+        unit 0 {
+            family inet {
+                address 192.168.3.2/24;
+            }
+        }
+    }
+}
+routing-instances {
+    aws {
+        routing-options {
+            static {
+                route 0.0.0.0/0 next-hop 10.0.5.1;
+                route 10.2.0.0/16 next-hop 10.0.3.1;
+                route 10.3.0.0/16 next-hop 10.0.4.1;
+                route 192.168.3.0/24 next-hop st0.0;
+            }
+        }
+        interface ge-0/0/0.0;
+        interface ge-0/0/1.0;
+        interface ge-0/0/2.0;
+        interface st0.0;
+        instance-type virtual-router;
+    }
+}                                       
+routing-options {
+    static {
+        route 0.0.0.0/0 next-hop 10.0.1.1;
+    }
+}
