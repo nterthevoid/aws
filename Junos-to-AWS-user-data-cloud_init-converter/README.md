@@ -1,4 +1,4 @@
-# A script that converts junos vSRX configs into a cloud init user data file. Were that file can be included as part of a CloudFormation template. Or, directly copy and pasted into the user data section at launch.
+# A script that converts junos vSRX configs into a user data template file. Were that file can be included as part of a CloudFormation template. Or, directly copy and pasted into the user data section at launch.
 
 
 
