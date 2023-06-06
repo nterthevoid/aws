@@ -1,0 +1,36 @@
+###################################################################################
+###############   Written by Mark Snyder  Juniper Networks       ##################
+###############   msnyder@juniper.net                            ##################
+###################################################################################
+
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Parameters": {
+      "SSMjnprrtbl3id" : {
+        "Type" : "AWS::SSM::Parameter::Value<String>",
+        "Description": "Route table ID for subnet 3 to add to table",
+        "Default": "_SSMjnprrtbl3id"
+      },
+        "SSMjnprtgwid" : {
+          "Type" : "AWS::SSM::Parameter::Value<String>",
+          "Description": "JNPR security  VPC Transit Gateway Id",
+          "Default": "_SSMjnprtgwid"
+        }
+    },
+    "Resources": {
+        "RouteS3add" : {
+           "Type" : "AWS::EC2::Route",
+           "Properties" : {
+             "RouteTableId" : { "Ref" : "SSMjnprrtbl3id" },
+             "DestinationCidrBlock" : "10.0.0.0/8",
+             "TransitGatewayId": { "Ref" : "SSMjnprtgwid" }
+           }
+        }
+      },
+      "Outputs" : {
+          "RouteS3add" :{
+            "Value": {"Ref" : "RouteS3add"}
+          }
+      }
+}

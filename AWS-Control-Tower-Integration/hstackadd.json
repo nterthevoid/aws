@@ -1,0 +1,65 @@
+###################################################################################
+###############   Written by Mark Snyder  Juniper Networks       ##################
+###############   msnyder@juniper.net                            ##################
+###################################################################################
+
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Parameters": {
+      "SSMjnprtgwarn" : {
+        "Type" : "AWS::SSM::Parameter::Value<String>",
+        "Description": "add to table",
+        "Default": "_SSMjnprtgwarn"
+      },
+      "JNPRSECVPClogicalid": {
+        "Type": "String",
+        "Description": "Logical identifier Tag. ",
+        "Default": "JNPR1234"
+      },
+      "SSMSECG2id": {
+        "Type" : "AWS::SSM::Parameter::Value<String>",
+        "Description": "Secgroup Id. ",
+        "Default": "_SSMsecg2"
+      },
+      "ARNOU": {
+          "Type": "String",
+          "Default": "mt",
+          "Description": "ARN for destination ou"
+        },
+    },
+    "Resources": {
+        "jnprtgwshareremote": {
+          "Type" : "AWS::RAM::ResourceShare",
+          "Properties" : {
+              "AllowExternalPrincipals" : "true",
+              "Name" : "jnpr-sec-remote",
+              "Principals" : [ { "Ref" : "ARNOU" }],
+              "ResourceArns" : [ { "Ref" : "SSMjnprtgwarn" } ],
+              "Tags" : [
+                    {"Key" : "Name", "Value" : "jnprtgwshareremote"},
+                    {"Key" : "JNPRSECVPClogicalid", "Value" : {"Ref" : "JNPRSECVPClogicalid"} }
+              ],
+            }
+        },
+        "SGBaseIngressSECG2": {
+           "Type": "AWS::EC2::SecurityGroupIngress",
+                "Properties": {
+                        "CidrIp" : "10.0.0.0/8",
+                            "GroupId": {
+                                "Ref": "SSMSECG2id"
+                                },
+                              "IpProtocol": "-1"
+                        },
+            }
+    },
+"Outputs" : {
+    "jnprtgwshareremote" :{
+    "Value": {"Ref" : "jnprtgwshareremote"}
+    },
+    "SGBaseIngressSECG2" :{
+    "Value": {"Ref" : "SGBaseIngressSECG2"}
+    },
+
+}
+}
