@@ -55,9 +55,14 @@ Helpful Troubleshooting commands and links
 <img src="./png/routes.png" width="1000"/></center>
 </p>
 
+<h3> NAT Translation  </h3>
+<p align="center">
+<img src="./png/NAT.png" width="1000"/></center>
+</p>
+
 <h3> Architectural high level VPC Inspection possibilities </h3>
 <p align="center">
-<img src="./png/arch-hl.png" width="1000"/></center>
+<img src="./png/hlarch.png" width="1000"/></center>
 </p>
 
 
