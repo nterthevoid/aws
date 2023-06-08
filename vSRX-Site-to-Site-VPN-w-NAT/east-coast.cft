@@ -981,9 +981,9 @@
                     "chmod 2775 /var/www\n",
                     "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
                     "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
-                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
-                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
-                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami-wip/vault.png > /var/www/html/vault.png\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami-wip/index.php > /var/www/html/index.php\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami-wip/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
                     "EOF\n",
                     "chmod 777 /home/ec2-user/script1.sh\n"
                                     ]
@@ -1021,9 +1021,9 @@
                     "chmod 2775 /var/www\n",
                     "find /var/www -type d -exec sudo chmod 2775 {} \\;\n",
                     "find /var/www -type f -exec sudo chmod 0664 {} \\;\n",
-                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/vault.png > /var/www/html/vault.png\n",
-                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/index.php > /var/www/html/index.php\n",
-                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami-wip/vault.png > /var/www/html/vault.png\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami-wip/index.php > /var/www/html/index.php\n",
+                    "curl -l https://raw.githubusercontent.com/nterthevoid/aws/main/aws-ami-wip/Countdown.mp4 > /var/www/html/Countdown.mp4\n",
                     "EOF\n",
                     "chmod 777 /home/ec2-user/script1.sh\n"
                                     ]
